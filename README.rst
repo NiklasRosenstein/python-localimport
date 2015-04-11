@@ -4,6 +4,9 @@ localimport
 **Secure and optimized imports for Python applications in embedded
 environments.**
 
+Find the minified version to paste in your application here:
+https://gist.github.com/NiklasRosenstein/1d4a04f67844db6f9263
+
 ``_localimport(path, [parent_dir, [eggs]])``
 --------------------------------------------
 
