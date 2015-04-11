@@ -21,9 +21,7 @@
 __author__ = 'Niklas Rosenstein <rosensteinniklas@gmail.com>'
 __version__ = '1.0'
 
-import glob
-import os
-import sys
+import glob, os, sys
 
 
 class _localimport(object):
