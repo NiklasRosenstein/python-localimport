@@ -5,7 +5,7 @@ localimport
 environments.**
 
 Find the minified version to paste in your application here:
-https://gist.github.com/NiklasRosenstein/1d4a04f67844db6f9263
+https://gist.github.com/NiklasRosenstein/f5690d8f36bbdc8e5556
 
 ``_localimport(path, [parent_dir, [eggs]])``
 --------------------------------------------
