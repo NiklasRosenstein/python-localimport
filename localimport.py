@@ -19,11 +19,9 @@
 # THE SOFTWARE.
 
 __author__ = 'Niklas Rosenstein <rosensteinniklas@gmail.com>'
-__version__ = '1.0'
+__version__ = '1.1'
 
 import glob, os, sys
-
-
 class _localimport(object):
     """
     This class provides a secure import mechanism to prevent name
@@ -121,7 +119,7 @@ class _localimport(object):
             'disables': {},
         }
 
-        sys.path[:] = self.path
+        sys.path[:] = self.path + sys.path
         sys.meta_path[:] = self.meta_path
 
         # Restore all existing imported modules from the _localimport
@@ -259,7 +257,7 @@ class _localimport(object):
             if sys._getframe().f_back.f_globals is captured_globals:
                 # Only disable if the name is not a built-in module.
                 if name not in sys.builtin_module_names:
-                    self._disable_module(name)
+                    self._disable_module(name.split('.')[0])
 
             return original(name, *args, **kwargs)
 
