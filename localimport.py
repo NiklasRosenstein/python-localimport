@@ -30,9 +30,9 @@ class _localimport(object):
 
     Features:
         - Takes :mod:`pkg_resources` namespace package dictionary into
-        account.
+          account.
         - Removes modules from the global scope, but only if they were
-        import from the local site (determined by :attr:`path`).
+          import from the local site (determined by :attr:`path`).
 
     .. code-block:: python
 
@@ -43,19 +43,20 @@ class _localimport(object):
     .. license:: MIT
 
     Attributes:
-        path (list of str): The paths from which modules should
-            be imported. These will also be used to determine if
-            a module was imported from the local site and wether
-            it should be released after the localimport is complete.
-        meta_path (list of importers): A list of importer objects
-            that will be prepended to :data:`sys.meta_path` during
-            the localimport. Use of meta importers is discouraged
-            as it could lead to problems determining whether a
-            module is from the local site.
-        modules (dict of str: module): Dictionary of the modules
-            imported from the local site.
-        in_context (bool): True when the localimport context-
-            manager is active.
+        path (list of str):
+            The paths from which modules should be imported. These
+            will also be used to determine if a module was imported
+            from the local site and wether it should be released after
+            the localimport is complete.
+        meta_path (list of importers):
+            A list of importer objects that will be prepended to
+            :data:`sys.meta_path` during the localimport. Use of meta
+            importers is discouraged as it could lead to problems
+            determining whether a module is from the local site.
+        modules (dict of str: module):
+            Dictionary of the modules imported from the local site.
+        in_context (bool):
+            True when the localimport context-manager is active.
     """
 
     _py3k = sys.version_info[0] >= 3
