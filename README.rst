@@ -1,3 +1,8 @@
+localimport
+===========
+
+*Minified Version at https://gist.github.com/NiklasRosenstein/f5690d8f36bbdc8e5556.*
+
 Secure import mechanism that restores the previous global importer
 state after the context-manager exits. Modules imported from the local
 site will be moved into :attr:`modules`.
