@@ -19,69 +19,46 @@
 # THE SOFTWARE.
 
 __author__ = 'Niklas Rosenstein <rosensteinniklas@gmail.com>'
-__version__ = '1.1'
+__version__ = '1.2'
 
 import glob, os, sys
 class _localimport(object):
     """
-    This class provides a secure import mechanism to prevent name
-    clashes in the global module space and allow add-on Python code
-    and applications to import their own local modules even in
-    embedded environments. Client code is supposed to use a source
-    copy of this class directly in the application.
+    Secure import mechanism that restores the previous global importer
+    state after the context-manager exits. Modules imported from the local
+    site will be moved into :attr:`modules`.
 
-    The *path* parameter can be either a string or list of strings
-    that will be prepended to :data:`sys.path`. All paths are, if not
-    absolute, relative to the specified *parent_dir* which defaults
-    to ``os.path.dirname(__file__)``.
-
-    If *eggs* is True, files and folders inside any path of the
-    specified *paths* that end with ``.egg`` will be used in addition
-    to the specified *path*.
+    Features:
+        - Takes :mod:`pkg_resources` namespace package dictionary into
+        account.
+        - Removes modules from the global scope, but only if they were
+        import from the local site (determined by :attr:`path`).
 
     .. code-block:: python
 
-      with _localimport('lib') as importer:
-          some_package = importer.load('some_package')
-      # // or //
-      with _localimport('lib', eggs=True) as importer:
-          import some_package
+        with _localimport('res/modules'):
+            import some_package
 
-    Inside the with-context of the *_localimport*, the builtin
-    ``__import__()`` function is hooked to allow capturing the
-    ``import ...`` statements inside the with-context, automatically
-    disabling existing modules that could shadow the import from the
-    local directory.
-
-    .. codeauthor:: Niklas Rosenstein <rosensteinniklas@gmail.com>
+    .. author:: Niklas Rosenstein <rosensteinniklas@gmail.com>
     .. license:: MIT
 
-    -------------------------------------------------------------------
-
-    .. attribute:: path
-
-        A list of paths that will be used to import modules from.
-
-    .. attribute:: meta_path
-
-        A list of importer objects that will be prepended to
-        :data:`sys.path`. When leaving the *_localimport* context,
-        this list will be updated to contain all importer objects that
-        have been added from imported modules.
-
-    .. attribute:: modules
-
-        A dictionary like :data:`sys.modules` that contains all
-        modules imported via the *_localimport* context from the paths
-        in the :attr:`path` list.
-
-    .. attribute:: in_context
-
-        True if the importer has entered the context, False if not.
+    Attributes:
+        path (list of str): The paths from which modules should
+            be imported. These will also be used to determine if
+            a module was imported from the local site and wether
+            it should be released after the localimport is complete.
+        meta_path (list of importers): A list of importer objects
+            that will be prepended to :data:`sys.meta_path` during
+            the localimport. Use of meta importers is discouraged
+            as it could lead to problems determining whether a
+            module is from the local site.
+        modules (dict of str: module): Dictionary of the modules
+            imported from the local site.
+        in_context (bool): True when the localimport context-
+            manager is active.
     """
 
     _py3k = sys.version_info[0] >= 3
-    _builtins = __import__('builtins') if _py3k else __import__('__builtin__')
     _string_types = (str,) if _py3k else (basestring,)
 
     def __init__(self, path, parent_dir=os.path.dirname(__file__), eggs=False):
@@ -100,54 +77,36 @@ class _localimport(object):
         self.in_context = False
 
     def __enter__(self):
-        """
-        Called when the with-context is entered. Saves the global
-        importer state which will be restored in :meth:`__exit__`.
-        Also adds *self* to :data:`sys.meta_path` so it can check
-        on-demand if a module would shadow another.
-        """
+        # pkg_resources comes with setuptools.
+        try: import pkg_resources; nsdict = pkg_resources._namespace_packages
+        except ImportError: nsdict = None
 
-        # Override the builtin import mechanism and save the old.
-        self.original_import = self._builtins.__import__
-        import_hook = self._get_import_hook(self._builtins.__import__)
-        self._mock(self._builtins, '__import__')(import_hook)
-
+        # Save the global importer state.
         self.state = {
-            'captured_globals': globals(),
+            'nsdict': nsdict,
             'path': sys.path[:],
             'meta_path': sys.meta_path[:],
             'disables': {},
         }
 
+        # Update the systems meta path.
         sys.path[:] = self.path + sys.path
-        sys.meta_path[:] = self.meta_path
+        sys.meta_path[:] = self.meta_path + sys.meta_path
 
-        # Restore all existing imported modules from the _localimport
-        # and disables those that would be overwritten.
-        # todo: what about None-modules?
+        # If this function is called not the first time, we need to
+        # restore the modules that have been imported with it and
+        # temporarily disable the ones that would be shadowed.
         for key, mod in self.modules.items():
-            try:
-                self.state['disables'][key] = sys.modules.pop(key)
-            except KeyError:
-                pass
+            try: self.state['disables'][key] = sys.modules.pop(key)
+            except KeyError: pass
             sys.modules[key] = mod
 
         self.in_context = True
         return self
 
     def __exit__(self, *__):
-        """
-        Restore the global importer state and move newly imported
-        modules and added *meta_path* objects to the *_localimport*
-        object.
-        """
-
         if not self.in_context:
             raise RuntimeError('context not entered')
-
-        # Unmock the import hook that we created in __enter__().
-        self._unmock(self._builtins, '__import__')
-        del self.original_import
 
         # Move all meta path objects to self.meta_path that have not
         # been there before and have not been in the list before.
@@ -159,15 +118,26 @@ class _localimport(object):
         # Move all modules that shadow modules of the original system
         # state or modules that are from any of the _localimport context
         # paths away.
-        for key, mod in sys.modules.items():
+        modules = sys.modules.copy()
+        for key, mod in modules.items():
+            force_pop = False
             filename = getattr(mod, '__file__', None)
-            if not filename:
-                continue
-            if key in self.state['disables'] or self._is_local(filename):
+            if not filename and key not in sys.builtin_module_names:
+                parent = key.rsplit('.', 1)[0]
+                if parent in modules:
+                    filename = getattr(modules[parent], '__file__', None)
+                else:
+                    force_pop = True
+            if force_pop or (filename and self._is_local(filename)):
                 self.modules[key] = sys.modules.pop(key)
 
         # Bring all disabled modules back and restore the
         # the original state.
+        try:
+            import pkg_resources
+            pkg_resources._namespace_packages.clear()
+            pkg_resources._namespace_packages.update(self.state['nsdict'])
+        except ImportError: pass
         sys.modules.update(self.state['disables'])
         sys.path[:] = self.state['path']
         sys.meta_path[:] = self.state['meta_path']
@@ -175,98 +145,9 @@ class _localimport(object):
         self.in_context = False
         del self.state
 
-    def load(self, fullname, return_root=True):
-        """
-        load(fullname) -> module.
-
-        Loads the module specified by *fullname* and returns it. If
-        *return_root* is True, returns the root module, otherwise it
-        returns the lowest sub-module.
-
-        Disables all existing modules that could shadow the import by
-        taking the name of the root module of *fullname*. Also handles
-        built-in modules correctly to not accidentally disable them.
-
-        .. note:: This method should be called within the context
-            manager of *self* to optimize the import process.
-
-        :raise ImportError: If *fullname* can not be imported.
-        """
-
-        if not self.in_context:
-            with self:
-                return self.load(fullname, return_root)
-
-        parts = fullname.split('.')
-        if parts[0] not in sys.builtin_module_names:
-            self._disable_module(parts[0])
-
-        root = module = self.original_import(fullname)
-        if not return_root:
-            for part in parts[1:]:
-                module = getattr(module, part)
-
-        return module
-
-    def _disable_module(self, fullname):
-        """
-        Disables the module *fullname* and all its submodules to
-        prevent shadowing of an import that will follow this function
-        call. The modules will be moved away from :data:`sys.modules`
-        and restored in :meth:`__exit__`.
-
-        Modules that are assumed "local" (ie. are imported from any
-        of the :attr:`path` names) are not disabled.
-
-        .. important:: This function does not check if *fullname*
-            is a built-in module. Disabling a built-in module can
-            be dangerous and disrupt the import mechanism.
-        """
-
-        if not self.in_context:
-            raise RuntimeError('_localimport context not entered')
-
-        for key, mod in sys.modules.items():
-            if key == fullname or key.startswith(fullname + '.'):
-                filename = getattr(mod, '__file__', None)
-                if filename and self._is_local(filename):
-                    continue
-                self.state['disables'][key] = sys.modules.pop(key)
-
-    def _get_import_hook(self, original):
-        """
-        _get_import_hook(original) -> function.
-
-        Returns a function that can be used to hook the builtin
-        ``__import__()`` function. The returned function will capture
-        all imports made from the same module as the module that
-        entered the *_localimport* context by comparing the ID of the
-        globals dictionary.
-
-        The captured module names will be disabled unless they're
-        built-in modules.
-        """
-
-        def import_hook(name, *args, **kwargs):
-            if not self.in_context:
-                raise RuntimeError('_localimport context not entered')
-
-            # Check if we should capture this import as a name that
-            # we need to disable to prevent shadowing.
-            captured_globals = self.state['captured_globals']
-            if sys._getframe().f_back.f_globals is captured_globals:
-                # Only disable if the name is not a built-in module.
-                if name not in sys.builtin_module_names:
-                    self._disable_module(name.split('.')[0])
-
-            return original(name, *args, **kwargs)
-
-        return import_hook
-
     def _is_local(self, filename):
         """
         _is_local(filename) -> bool.
-
         Returns True if *filename* is the subpath of any of the paths
         in :attr:`path` and False if not.
         """
@@ -282,7 +163,6 @@ class _localimport(object):
     def _is_subpath(path, ask_dir):
         """
         _is_subpath(path, ask_dir) -> bool
-
         Returns True if *path* points to the same or a subpath of
         *ask_dir*.
         """
@@ -292,33 +172,3 @@ class _localimport(object):
         except ValueError:
             return False  # on Windows if the drive letters don't match
         return relpath == os.curdir or not relpath.startswith(os.pardir)
-
-    @staticmethod
-    def _mock(obj, attr):
-        """
-        _mock(obj, attr) -> decorator.
-        decorator(func) -> function.
-
-        Decorator to mock the attribute *attr* in *obj* with the
-        decorated function. The function will get an attribute called
-        ``'original'`` that contains the original attribute value.
-        """
-
-        def decorator(func):
-            func.original = getattr(obj, attr)
-            setattr(obj, attr, func)
-            return func
-        return decorator
-
-    @staticmethod
-    def _unmock(obj, attr):
-        """
-        _unmock(obj, attr) -> object.
-
-        Unmocks the attribute *attr* of *obj* reverting to the original
-        state one mocking level earlier.
-        """
-
-        data = getattr(obj, attr)
-        setattr(obj, attr, getattr(data, 'original'))
-        return data
