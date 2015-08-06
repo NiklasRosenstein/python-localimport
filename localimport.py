@@ -134,14 +134,14 @@ class _localimport(object):
 
         # Bring all disabled modules back and restore the
         # the original state.
+        sys.modules.update(self.state['disables'])
+        sys.path[:] = self.state['path']
+        sys.meta_path[:] = self.state['meta_path']
         try:
             import pkg_resources
             pkg_resources._namespace_packages.clear()
             pkg_resources._namespace_packages.update(self.state['nsdict'])
         except ImportError: pass
-        sys.modules.update(self.state['disables'])
-        sys.path[:] = self.state['path']
-        sys.meta_path[:] = self.state['meta_path']
 
         self.in_context = False
         del self.state

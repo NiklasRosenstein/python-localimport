@@ -4,7 +4,7 @@ exec("""
 import glob,os,sys
 class _localimport(object):
  _py3k=sys.version_info[0]>=3
- _string_types=(str)if _py3k else(basestring)
+ _string_types=(str,)if _py3k else(basestring,)
  def __init__(self,path,parent_dir=os.path.dirname(__file__),eggs=False):
   super(_localimport,self).__init__()
   self.path=[]
@@ -22,7 +22,7 @@ class _localimport(object):
  def __enter__(self):
   try:import pkg_resources;nsdict=pkg_resources._namespace_packages
   except ImportError:nsdict=None
-  self.state={'nsdict':nsdict,'path':sys.path[:],'meta_path':sys.meta_path[:],'disables':{}}
+  self.state={'nsdict':nsdict,'path':sys.path[:],'meta_path':sys.meta_path[:],'disables':{},}
   sys.path[:]=self.path+sys.path
   sys.meta_path[:]=self.meta_path+sys.meta_path
   for key,mod in self.modules.items():
@@ -50,14 +50,14 @@ class _localimport(object):
      force_pop=True
    if force_pop or(filename and self._is_local(filename)):
     self.modules[key]=sys.modules.pop(key)
+  sys.modules.update(self.state['disables'])
+  sys.path[:]=self.state['path']
+  sys.meta_path[:]=self.state['meta_path']
   try:
    import pkg_resources
    pkg_resources._namespace_packages.clear()
    pkg_resources._namespace_packages.update(self.state['nsdict'])
   except ImportError:pass
-  sys.modules.update(self.state['disables'])
-  sys.path[:]=self.state['path']
-  sys.meta_path[:]=self.state['meta_path']
   self.in_context=False
   del self.state
  def _is_local(self,filename):
