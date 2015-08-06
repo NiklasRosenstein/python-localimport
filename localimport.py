@@ -19,7 +19,7 @@
 # THE SOFTWARE.
 
 __author__ = 'Niklas Rosenstein <rosensteinniklas@gmail.com>'
-__version__ = '1.2'
+__version__ = '1.3'
 
 import glob, os, sys
 class _localimport(object):
