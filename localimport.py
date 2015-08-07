@@ -19,9 +19,9 @@
 # THE SOFTWARE.
 
 __author__ = 'Niklas Rosenstein <rosensteinniklas@gmail.com>'
-__version__ = '1.3'
+__version__ = '1.4.0'
 
-import glob, os, sys
+import glob, os, sys, traceback
 class _localimport(object):
     """
     Secure import mechanism that restores the previous global importer
@@ -35,9 +35,13 @@ class _localimport(object):
           import from the local site (determined by :attr:`path`).
 
     .. code-block:: python
-
         with _localimport('res/modules'):
             import some_package
+
+    *New in Version 1.4.0*:
+        - .pth files are now evaluated
+        - .egg files/folders are automatically expanded
+        - removed *eggs* parameter of constructor
 
     .. author:: Niklas Rosenstein <rosensteinniklas@gmail.com>
     .. license:: MIT
@@ -62,7 +66,7 @@ class _localimport(object):
     _py3k = sys.version_info[0] >= 3
     _string_types = (str,) if _py3k else (basestring,)
 
-    def __init__(self, path, parent_dir=os.path.dirname(__file__), eggs=False):
+    def __init__(self, path, parent_dir=os.path.dirname(__file__)):
         super(_localimport, self).__init__()
         self.path = []
         if isinstance(path, self._string_types):
@@ -70,9 +74,14 @@ class _localimport(object):
         for path_name in path:
             if not os.path.isabs(path_name):
                 path_name = os.path.join(parent_dir, path_name)
+
             self.path.append(path_name)
-            if eggs:
-                self.path.extend(glob.glob(os.path.join(path_name, '*.egg')))
+            self.path.extend(glob.glob(os.path.join(path_name, '*.egg')))
+
+            # Evaluate .pth files.
+            for fn in glob.glob(os.path.join(path_name, '*.pth')):
+                self._eval_pth(fn)
+
         self.meta_path = []
         self.modules = {}
         self.in_context = False
@@ -159,6 +168,32 @@ class _localimport(object):
             if self._is_subpath(filename, path_name):
                 return True
         return False
+
+    def _eval_pth(self, filename):
+        """
+        Evaluates the ``*.pth`` file *filename* and appends the
+        paths to :attr:`self.path`.
+        """
+
+        if not os.path.isfile(filename):
+            return
+        with open(filename, 'r') as fp:
+            for index, line in enumerate(fp):
+                if line.startswith('import'):
+                    line_fn = '{0}#{1}'.format(filename, index + 1)
+                    try:
+                        exec compile(line, line_fn, 'exec')
+                    except BaseException:
+                        traceback.print_exc()
+                else:
+                    index = line.find('#')
+                    if index > 0: line = line[:index]
+                    line = line.strip()
+                    if not os.path.isabs(line):
+                        line = os.path.join(os.path.dirname(filename), line)
+                    line = os.path.normpath(line)
+                    if line and line not in self.path:
+                        self.path.append(line)
 
     @staticmethod
     def _is_subpath(path, ask_dir):

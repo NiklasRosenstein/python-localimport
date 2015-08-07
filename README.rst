@@ -12,14 +12,16 @@ Features:
       account.
     - Removes modules from the global scope, but only if they were
       import from the local site (determined by :attr:`path`).
+    - Automatically extends the path with `*.egg` files/folders that
+      are detected in the specified paths
+    - Automatically evaluates `*.pth` files in the specified paths
+
+Example:
 
 .. code-block:: python
 
     with _localimport('res/modules'):
         import some_package
-
-.. author:: Niklas Rosenstein <rosensteinniklas@gmail.com>
-.. license:: MIT
 
 Attributes:
     path (list of str):
@@ -36,3 +38,6 @@ Attributes:
         Dictionary of the modules imported from the local site.
     in_context (bool):
         True when the localimport context-manager is active.
+
+.. author:: Niklas Rosenstein <rosensteinniklas@gmail.com>
+.. license:: MIT
