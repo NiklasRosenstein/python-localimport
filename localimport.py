@@ -19,7 +19,7 @@
 # THE SOFTWARE.
 
 __author__ = 'Niklas Rosenstein <rosensteinniklas@gmail.com>'
-__version__ = '1.4.0'
+__version__ = '1.4.1'
 
 import glob, os, sys, traceback
 class _localimport(object):
@@ -88,7 +88,7 @@ class _localimport(object):
 
     def __enter__(self):
         # pkg_resources comes with setuptools.
-        try: import pkg_resources; nsdict = pkg_resources._namespace_packages
+        try: import pkg_resources; nsdict = pkg_resources._namespace_packages.copy()
         except ImportError: nsdict = None
 
         # Save the global importer state.
