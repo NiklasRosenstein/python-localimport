@@ -19,33 +19,28 @@
 # THE SOFTWARE.
 
 __author__ = 'Niklas Rosenstein <rosensteinniklas@gmail.com>'
-__version__ = '1.4.1'
+__version__ = '1.4.2'
 
-import glob, os, sys, traceback
+import glob, os, pkgutil, sys, traceback
 class _localimport(object):
     """
     Secure import mechanism that restores the previous global importer
     state after the context-manager exits. Modules imported from the local
     site will be moved into :attr:`modules`.
-
     Features:
         - Takes :mod:`pkg_resources` namespace package dictionary into
           account.
         - Removes modules from the global scope, but only if they were
           import from the local site (determined by :attr:`path`).
-
     .. code-block:: python
         with _localimport('res/modules'):
             import some_package
-
     *New in Version 1.4.0*:
         - .pth files are now evaluated
         - .egg files/folders are automatically expanded
         - removed *eggs* parameter of constructor
-
     .. author:: Niklas Rosenstein <rosensteinniklas@gmail.com>
     .. license:: MIT
-
     Attributes:
         path (list of str):
             The paths from which modules should be imported. These
@@ -94,6 +89,7 @@ class _localimport(object):
         # Save the global importer state.
         self.state = {
             'nsdict': nsdict,
+            'nspaths': {},
             'path': sys.path[:],
             'meta_path': sys.meta_path[:],
             'disables': {},
@@ -111,12 +107,22 @@ class _localimport(object):
             except KeyError: pass
             sys.modules[key] = mod
 
+        # Update the __path__ of all namespace modules.
+        for key, mod in sys.modules.items():
+            if hasattr(mod, '__path__'):
+                self.state[key] = mod.__path__[:]
+                mod.__path__ = pkgutil.extend_path(mod.__path__, mod.__name__)
+
         self.in_context = True
         return self
 
     def __exit__(self, *__):
         if not self.in_context:
             raise RuntimeError('context not entered')
+
+        # Restore the original __path__ value of namespace packages.
+        for key, path in self.state['nspaths'].items():
+            sys.modules[key].__path__ = path
 
         # Move all meta path objects to self.meta_path that have not
         # been there before and have not been in the list before.
