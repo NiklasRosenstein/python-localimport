@@ -19,7 +19,7 @@
 # THE SOFTWARE.
 
 __author__ = 'Niklas Rosenstein <rosensteinniklas@gmail.com>'
-__version__ = '1.4.3'
+__version__ = '1.4.4'
 
 import glob, os, pkgutil, sys, traceback
 class _localimport(object):
@@ -73,10 +73,6 @@ class _localimport(object):
             self.path.append(path_name)
             self.path.extend(glob.glob(os.path.join(path_name, '*.egg')))
 
-            # Evaluate .pth files.
-            for fn in glob.glob(os.path.join(path_name, '*.pth')):
-                self._eval_pth(fn)
-
         self.meta_path = []
         self.modules = {}
         self.in_context = False
@@ -112,6 +108,12 @@ class _localimport(object):
             if hasattr(mod, '__path__'):
                 self.state['nspaths'][key] = mod.__path__[:]
                 mod.__path__ = pkgutil.extend_path(mod.__path__, mod.__name__)
+                new = mod.__path__[:]
+
+        # Evaluate .pth files.
+        for path_name in self.path:
+            for fn in glob.glob(os.path.join(path_name, '*.pth')):
+                self._eval_pth(fn, path_name)
 
         self.in_context = True
         return self
@@ -175,7 +177,7 @@ class _localimport(object):
                 return True
         return False
 
-    def _eval_pth(self, filename):
+    def _eval_pth(self, filename, sitedir):
         """
         Evaluates the ``*.pth`` file *filename* and appends the
         paths to :attr:`self.path`.
