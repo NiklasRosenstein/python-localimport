@@ -19,9 +19,9 @@
 # THE SOFTWARE.
 
 __author__ = 'Niklas Rosenstein <rosensteinniklas@gmail.com>'
-__version__ = '1.4.4'
+__version__ = '1.4.5'
 
-import glob, os, pkgutil, sys, traceback
+import glob, os, pkgutil, sys, traceback, zipfile
 class _localimport(object):
     """
     Secure import mechanism that restores the previous global importer
@@ -89,11 +89,13 @@ class _localimport(object):
             'path': sys.path[:],
             'meta_path': sys.meta_path[:],
             'disables': {},
+            'pkgutil.extend_path': pkgutil.extend_path,
         }
 
-        # Update the systems meta path.
+        # Update the systems meta path and apply function mocks.
         sys.path[:] = self.path + sys.path
         sys.meta_path[:] = self.meta_path + sys.meta_path
+        pkgutil.extend_path = self._extend_path
 
         # If this function is called not the first time, we need to
         # restore the modules that have been imported with it and
@@ -154,6 +156,7 @@ class _localimport(object):
         sys.modules.update(self.state['disables'])
         sys.path[:] = self.state['path']
         sys.meta_path[:] = self.state['meta_path']
+        pkgutil.extend_path = self.state['pkgutil.extend_path']
         try:
             import pkg_resources
             pkg_resources._namespace_packages.clear()
@@ -202,6 +205,30 @@ class _localimport(object):
                     line = os.path.normpath(line)
                     if line and line not in self.path:
                         self.path.append(line)
+
+    def _extend_path(self, pth, name):
+        ''' Better implementation of `pkgutil.extend_path` that doesn't
+        work well with zipped Python eggs. `pkgutil.extend_path` function
+        gets mocked by this function inside the localimport context. '''
+
+        def zip_isdir(z, name):
+            name = name.rstrip('/') + '/'
+            return any(x.startswith(name) for x in z.namelist())
+
+        pth = list(pth)
+        for path in sys.path:
+            if path.endswith('.egg') and zipfile.is_zipfile(path):
+                try:
+                    egg = zipfile.ZipFile(path, 'r')
+                    if zip_isdir(egg, name):
+                        pth.append(os.path.join(path, name))
+                except (zipfile.BadZipFile, zipfile.LargeZipFile):
+                    pass
+            else:
+                path = os.path.join(path, name)
+                if os.path.isdir(path) and path not in pth:
+                    pth.append(path)
+        return pth
 
     @staticmethod
     def _is_subpath(path, ask_dir):
