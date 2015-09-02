@@ -19,44 +19,50 @@
 # THE SOFTWARE.
 
 __author__ = 'Niklas Rosenstein <rosensteinniklas@gmail.com>'
-__version__ = '1.4.5'
+__version__ = '1.4.6'
 
 import glob, os, pkgutil, sys, traceback, zipfile
 class _localimport(object):
-    """
-    Secure import mechanism that restores the previous global importer
+    ''' Secure import mechanism that restores the previous global importer
     state after the context-manager exits. Modules imported from the local
-    site will be moved into :attr:`modules`.
+    site will be moved into `_localimport.modules`.
+
     Features:
-        - Takes :mod:`pkg_resources` namespace package dictionary into
-          account.
-        - Removes modules from the global scope, but only if they were
-          import from the local site (determined by :attr:`path`).
-    .. code-block:: python
-        with _localimport('res/modules'):
-            import some_package
-    *New in Version 1.4.0*:
-        - .pth files are now evaluated
-        - .egg files/folders are automatically expanded
-        - removed *eggs* parameter of constructor
-    .. author:: Niklas Rosenstein <rosensteinniklas@gmail.com>
-    .. license:: MIT
-    Attributes:
-        path (list of str):
-            The paths from which modules should be imported. These
-            will also be used to determine if a module was imported
-            from the local site and wether it should be released after
-            the localimport is complete.
-        meta_path (list of importers):
-            A list of importer objects that will be prepended to
-            :data:`sys.meta_path` during the localimport. Use of meta
-            importers is discouraged as it could lead to problems
-            determining whether a module is from the local site.
-        modules (dict of str: module):
-            Dictionary of the modules imported from the local site.
-        in_context (bool):
-            True when the localimport context-manager is active.
-    """
+        - Supports namespace packages
+        - Supports evaluating `.pth` files
+        - Automatically adds `.egg` files to the `path` when they are found
+          in one of the directories specified on initialization.
+        - Mocks `pkgutil.extend_path()` to a version that also supports
+          zipped Python Eggs.
+        - Only moves imported modules into the shadows when they were
+          imported from one of the paths specified in the `_localimport`
+          object.
+        - Reusable for delayed-import.
+
+    ```python
+    with _localimport('res/modules'):
+        import some_package
+    ```
+
+    __Attributes__:
+
+    `path (list of str)`
+    > The paths from which modules should be imported.These will also be
+    > used to determine if a module was imported from the local site and
+    > wether it should be released after the localimport is complete.
+
+    `meta_path (list of importers)`
+    > A list of importer objects that will be prepended to `sys.meta_path`
+    > during the localimport. Use of meta importers is discouraged as it
+    > could lead to problems determining whether a module is from the local
+    > site.
+
+    `modules (dict of str: module)`
+    > Dictionary of the modules imported from the local site.
+
+    `in_context (bool)`
+    > True when the localimport context-manager is active.
+    '''
 
     _py3k = sys.version_info[0] >= 3
     _string_types = (str,) if _py3k else (basestring,)
@@ -105,6 +111,11 @@ class _localimport(object):
             except KeyError: pass
             sys.modules[key] = mod
 
+        # Evaluate .pth files.
+        for path_name in self.path:
+            for fn in glob.glob(os.path.join(path_name, '*.pth')):
+                self._eval_pth(fn, path_name)
+
         # Update the __path__ of all namespace modules.
         for key, mod in sys.modules.items():
             if hasattr(mod, '__path__'):
@@ -112,17 +123,20 @@ class _localimport(object):
                 mod.__path__ = pkgutil.extend_path(mod.__path__, mod.__name__)
                 new = mod.__path__[:]
 
-        # Evaluate .pth files.
-        for path_name in self.path:
-            for fn in glob.glob(os.path.join(path_name, '*.pth')):
-                self._eval_pth(fn, path_name)
-
         self.in_context = True
         return self
 
     def __exit__(self, *__):
         if not self.in_context:
             raise RuntimeError('context not entered')
+
+        # Figure the difference of the original sys.path and the
+        # current path. The list of paths will be used to determine
+        # what modules are local and what not.
+        local_paths = []
+        for path in sys.path:
+            if path not in self.state['path']:
+                local_paths.append(path)
 
         # Restore the original __path__ value of namespace packages.
         for key, path in self.state['nspaths'].items():
@@ -148,7 +162,7 @@ class _localimport(object):
                     filename = getattr(modules[parent], '__file__', None)
                 else:
                     force_pop = True
-            if force_pop or (filename and self._is_local(filename)):
+            if force_pop or (filename and self._is_local(filename, local_paths)):
                 self.modules[key] = sys.modules.pop(key)
 
         # Bring all disabled modules back and restore the
@@ -166,25 +180,21 @@ class _localimport(object):
         self.in_context = False
         del self.state
 
-    def _is_local(self, filename):
-        """
-        _is_local(filename) -> bool.
-        Returns True if *filename* is the subpath of any of the paths
-        in :attr:`path` and False if not.
-        """
+    def _is_local(self, filename, pathlist):
+        ''' Returns True if *filename* is a subpath of any of the paths
+        contained by the `_localimport`. This is used to determine if a
+        module was imported from the local site. '''
 
         filename = os.path.abspath(filename)
-        for path_name in self.path:
+        for path_name in pathlist:
             path_name = os.path.abspath(path_name)
             if self._is_subpath(filename, path_name):
                 return True
         return False
 
     def _eval_pth(self, filename, sitedir):
-        """
-        Evaluates the ``*.pth`` file *filename* and appends the
-        paths to :attr:`self.path`.
-        """
+        '''  Evaluates a `.pth` file (supporting `import` statements),
+        and appends the result  to `sys.path`. Called from `__enter__()`. '''
 
         if not os.path.isfile(filename):
             return
@@ -203,8 +213,8 @@ class _localimport(object):
                     if not os.path.isabs(line):
                         line = os.path.join(os.path.dirname(filename), line)
                     line = os.path.normpath(line)
-                    if line and line not in self.path:
-                        self.path.append(line)
+                    if line and line not in sys.path:
+                        sys.path.append(line)
 
     def _extend_path(self, pth, name):
         ''' Better implementation of `pkgutil.extend_path` that doesn't
@@ -232,14 +242,11 @@ class _localimport(object):
 
     @staticmethod
     def _is_subpath(path, ask_dir):
-        """
-        _is_subpath(path, ask_dir) -> bool
-        Returns True if *path* points to the same or a subpath of
-        *ask_dir*.
-        """
+        ''' Returns True if *path* points to the same or a
+        subpathof *ask_dir*. '''
 
         try:
             relpath = os.path.relpath(path, ask_dir)
         except ValueError:
-            return False  # on Windows if the drive letters don't match
+            return False  # happens on Windows if drive letters don't match
         return relpath == os.curdir or not relpath.startswith(os.pardir)
