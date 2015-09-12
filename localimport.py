@@ -19,7 +19,7 @@
 # THE SOFTWARE.
 
 __author__ = 'Niklas Rosenstein <rosensteinniklas@gmail.com>'
-__version__ = '1.4.6'
+__version__ = '1.4.7'
 
 import glob, os, pkgutil, sys, traceback, zipfile
 class _localimport(object):
@@ -121,7 +121,6 @@ class _localimport(object):
             if hasattr(mod, '__path__'):
                 self.state['nspaths'][key] = mod.__path__[:]
                 mod.__path__ = pkgutil.extend_path(mod.__path__, mod.__name__)
-                new = mod.__path__[:]
 
         self.in_context = True
         return self
@@ -214,7 +213,7 @@ class _localimport(object):
                         line = os.path.join(os.path.dirname(filename), line)
                     line = os.path.normpath(line)
                     if line and line not in sys.path:
-                        sys.path.append(line)
+                        sys.path.insert(0, line)
 
     def _extend_path(self, pth, name):
         ''' Better implementation of `pkgutil.extend_path` that doesn't
