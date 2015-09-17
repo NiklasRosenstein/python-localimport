@@ -19,7 +19,7 @@
 # THE SOFTWARE.
 
 __author__ = 'Niklas Rosenstein <rosensteinniklas@gmail.com>'
-__version__ = '1.4.7'
+__version__ = '1.4.8'
 
 import glob, os, pkgutil, sys, traceback, zipfile
 class _localimport(object):
@@ -226,7 +226,7 @@ class _localimport(object):
 
         pth = list(pth)
         for path in sys.path:
-            if path.endswith('.egg') and zipfile.is_zipfile(path):
+            if zipfile.is_zipfile(path):
                 try:
                     egg = zipfile.ZipFile(path, 'r')
                     if zip_isdir(egg, name):

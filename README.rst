@@ -39,5 +39,12 @@ Attributes:
     in_context (bool):
         True when the localimport context-manager is active.
 
+Changelog
+=========
+
+__v1.4.8__
+
+- Now checks any path for being a zipfile rather than just .egg files
+
 .. author:: Niklas Rosenstein <rosensteinniklas@gmail.com>
 .. license:: MIT
