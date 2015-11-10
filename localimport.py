@@ -76,6 +76,7 @@ class _localimport(object):
             if not os.path.isabs(path_name):
                 path_name = os.path.join(parent_dir, path_name)
 
+            path_name = os.path.normpath(path_name)
             self.path.append(path_name)
             self.path.extend(glob.glob(os.path.join(path_name, '*.egg')))
 
@@ -216,28 +217,45 @@ class _localimport(object):
                         sys.path.insert(0, line)
 
     def _extend_path(self, pth, name):
-        ''' Better implementation of `pkgutil.extend_path` that doesn't
-        work well with zipped Python eggs. `pkgutil.extend_path` function
+        ''' Better implementation of `pkgutil.extend_path`, which doesn't
+        didn't with zipped Python eggs. The original `pkgutil.extend_path`
         gets mocked by this function inside the localimport context. '''
 
-        def zip_isdir(z, name):
-            name = name.rstrip('/') + '/'
-            return any(x.startswith(name) for x in z.namelist())
+        def zip_isfile(z, name):
+            name.rstrip('/')
+            return name in z.namelist()
 
-        pth = list(pth)
+        pname = os.path.join(*name.split('.'))
+        zname = '/'.join(name.split('.'))
+        init_py = '__init__' + os.extsep + 'py'
+        init_pyc = '__init__' + os.extsep + 'pyc'
+        init_pyo = '__init__' + os.extsep + 'pyo'
+
+        mod_path = set(pth)
         for path in sys.path:
             if zipfile.is_zipfile(path):
                 try:
                     egg = zipfile.ZipFile(path, 'r')
-                    if zip_isdir(egg, name):
-                        pth.append(os.path.join(path, name))
-                except (zipfile.BadZipFile, zipfile.LargeZipFile):
+                    addpath = (
+                        zip_isfile(egg, zname + '/__init__.py') or
+                        zip_isfile(egg, zname + '/__init__.pyc') or
+                        zip_isfile(egg, zname + '/__init__.pyo'))
+                    fpath = os.path.join(path, path, zname)
+                    if addpath:
+                        mod_path.add(fpath)
+                except (zipfile.BadZipfile, zipfile.LargeZipFile):
                     pass
             else:
-                path = os.path.join(path, name)
-                if os.path.isdir(path) and path not in pth:
-                    pth.append(path)
-        return pth
+                path = os.path.join(path, pname)
+                if os.path.isdir(path) and path not in mod_path:
+                    addpath = (
+                        os.path.isfile(os.path.join(path, init_py)) or
+                        os.path.isfile(os.path.join(path, init_pyc)) or
+                        os.path.isfile(os.path.join(path, init_pyo)))
+                    if addpath:
+                        mod_path.add(path)
+
+        return map(os.path.normpath, mod_path)
 
     @staticmethod
     def _is_subpath(path, ask_dir):
