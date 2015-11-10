@@ -19,7 +19,7 @@
 # THE SOFTWARE.
 
 __author__ = 'Niklas Rosenstein <rosensteinniklas@gmail.com>'
-__version__ = '1.4.8'
+__version__ = '1.4.9'
 
 import glob, os, pkgutil, sys, traceback, zipfile
 class _localimport(object):
@@ -119,7 +119,13 @@ class _localimport(object):
 
         # Update the __path__ of all namespace modules.
         for key, mod in sys.modules.items():
-            if hasattr(mod, '__path__'):
+            if mod is None:
+                # Relative imports could have lead to None-entries in
+                # sys.modules. Get rid of them so they can be re-evaluated.
+                prefix = key.rpartition('.')[0]
+                if hasattr(sys.modules.get(prefix), '__path__'):
+                    del sys.modules[key]
+            elif hasattr(mod, '__path__'):
                 self.state['nspaths'][key] = mod.__path__[:]
                 mod.__path__ = pkgutil.extend_path(mod.__path__, mod.__name__)
 

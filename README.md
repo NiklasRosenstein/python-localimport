@@ -25,6 +25,7 @@ assert 'some_package' not in sys.modules
 
 __v1.4.9__
 
+* Fix #11, remove `None`-entries of namespace packages in `sys.modules`
 * `_localimport._extend_path()` is is now less tolerant about extending
   the namespace path and only does so when a `__init__.{py,pyc,pyo}` file
   exists in the parsed directory
