@@ -26,8 +26,10 @@ assert 'some_package' not in sys.modules
 __v1.4.10__
 
 * Fix #13, `_extend_path()` now keeps order of the paths
-* Updated class docstrings
-* Added `do_eggs` and `do_pth` parameters to the constructor
+* Updat class docstrings
+* Add `do_eggs` and `do_pth` parameters to the constructor
+* Fix #12, add `_discover()` method and automatic disabling of modules
+  that could conflict with modules from the `_localimport` site
 
 __v1.4.9__
 

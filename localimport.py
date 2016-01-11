@@ -131,7 +131,7 @@ class _localimport(object):
         }
 
         # Update the systems meta path and apply function mocks.
-        sys.path[:] = self.path + sys.path
+        sys.path[:] = self.path
         sys.meta_path[:] = self.meta_path + sys.meta_path
         pkgutil.extend_path = self._extend_path
 
@@ -148,6 +148,19 @@ class _localimport(object):
             for path_name in self.path:
                 for fn in glob.glob(os.path.join(path_name, '*.pth')):
                     self._eval_pth(fn, path_name)
+
+        # Disable all modules that can be imported from the local site
+        # but that have already been imported from another to avoid
+        # possible collisions (#12).
+        for path in sys.path:
+            for module in self._discover(path):
+                sub = module + '.'
+                for key, mod in sys.modules.items():
+                    if key == module or key.startswith(sub):
+                        self.state['disables'][key] = sys.modules.pop(key)
+
+        # Add the original path to sys.path.
+        sys.path += self.state['path']
 
         # Update the __path__ of all namespace modules.
         for key, mod in sys.modules.items():
@@ -294,6 +307,46 @@ class _localimport(object):
                         mod_path.append(path)
 
         return [os.path.normpath(x) for x in mod_path]
+
+    def _discover(self, pth):
+        ''' Discover all Python modules that can be imported from *pth*. '''
+
+        def del_suffix(name):
+            return name.rpartition(os.extsep)[0]
+
+        def is_py(name):
+            return any(name.endswith(s) for s in suffixes)
+
+        def is_package(path):
+            for s in suffixes:
+                fn = os.path.join(path, '__init__' + s)
+                if os.path.isfile(fn):
+                    return True
+            return False
+
+        suffixes = [os.extsep + s for s in ('py', 'pyc', 'pyo')]
+        modules = set()
+        if os.path.isdir(pth):
+            for name in os.listdir(pth):
+                if is_package(os.path.join(pth, name)):
+                    # xxx: Recursive check required?
+                    modules.add(name)
+                elif is_py(name):
+                    modules.add(del_suffix(name))
+        elif zipfile.is_zipfile(pth):
+            try:
+                egg = zipfile.ZipFile(pth, 'r')
+                for name in egg.namelist():
+                    if not is_py(name):
+                        continue
+                    name = del_suffix(name).replace('/', '.')
+                    if name.endswith('.__init__'):
+                        name = name.rpartition('.')[0]
+                    modules.add(name)
+            except (zipfile.BadZipfile, zipfile.LargeZipFile):
+                pass  # xxx: Show a warning at least?
+
+        return modules
 
     @staticmethod
     def _is_subpath(path, ask_dir):
