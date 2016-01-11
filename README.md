@@ -23,6 +23,10 @@ assert 'some_package' not in sys.modules
 
 # Changelog
 
+__v1.4.10__
+
+* Fix #13, `_extend_path()` now keeps order of the paths
+
 __v1.4.9__
 
 * Fix #11, remove `None`-entries of namespace packages in `sys.modules`

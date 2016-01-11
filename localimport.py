@@ -19,7 +19,7 @@
 # THE SOFTWARE.
 
 __author__ = 'Niklas Rosenstein <rosensteinniklas@gmail.com>'
-__version__ = '1.4.9'
+__version__ = '1.4.10'
 
 import glob, os, pkgutil, sys, traceback, zipfile
 class _localimport(object):
@@ -223,8 +223,8 @@ class _localimport(object):
                         sys.path.insert(0, line)
 
     def _extend_path(self, pth, name):
-        ''' Better implementation of `pkgutil.extend_path`, which doesn't
-        didn't with zipped Python eggs. The original `pkgutil.extend_path`
+        ''' Better implementation of `pkgutil.extend_path`  which adds
+        support for zipped Python eggs. The original `pkgutil.extend_path`
         gets mocked by this function inside the localimport context. '''
 
         def zip_isfile(z, name):
@@ -237,7 +237,7 @@ class _localimport(object):
         init_pyc = '__init__' + os.extsep + 'pyc'
         init_pyo = '__init__' + os.extsep + 'pyo'
 
-        mod_path = set(pth)
+        mod_path = list(pth)
         for path in sys.path:
             if zipfile.is_zipfile(path):
                 try:
@@ -247,10 +247,10 @@ class _localimport(object):
                         zip_isfile(egg, zname + '/__init__.pyc') or
                         zip_isfile(egg, zname + '/__init__.pyo'))
                     fpath = os.path.join(path, path, zname)
-                    if addpath:
-                        mod_path.add(fpath)
+                    if addpath and fpath not in mod_path:
+                        mod_path.append(fpath)
                 except (zipfile.BadZipfile, zipfile.LargeZipFile):
-                    pass
+                    pass  # xxx: Show a warning at least?
             else:
                 path = os.path.join(path, pname)
                 if os.path.isdir(path) and path not in mod_path:
@@ -258,10 +258,10 @@ class _localimport(object):
                         os.path.isfile(os.path.join(path, init_py)) or
                         os.path.isfile(os.path.join(path, init_pyc)) or
                         os.path.isfile(os.path.join(path, init_pyo)))
-                    if addpath:
-                        mod_path.add(path)
+                    if addpath and path not in mod_path:
+                        mod_path.append(path)
 
-        return map(os.path.normpath, mod_path)
+        return [os.path.normpath(x) for x in mod_path]
 
     @staticmethod
     def _is_subpath(path, ask_dir):
