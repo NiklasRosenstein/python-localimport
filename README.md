@@ -23,6 +23,11 @@ assert 'some_package' not in sys.modules
 
 # Changelog
 
+__v1.4.11__
+
+* Fixed a bug where re-using the `_localimport` context added local modules
+  back to `sys.modules` but removed them immediately (#15)
+
 __v1.4.10__
 
 * Fix #13, `_extend_path()` now keeps order of the paths
