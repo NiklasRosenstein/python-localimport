@@ -135,6 +135,16 @@ class _localimport(object):
         sys.meta_path[:] = self.meta_path + sys.meta_path
         pkgutil.extend_path = self._extend_path
 
+        # Disable all modules that can be imported from the local site
+        # but that have already been imported from another to avoid
+        # possible collisions (#12).
+        for path in sys.path:
+            for module in self._discover(path):
+                sub = module + '.'
+                for key, mod in sys.modules.items():
+                    if key == module or key.startswith(sub):
+                        self.state['disables'][key] = sys.modules.pop(key)
+
         # If this function is called not the first time, we need to
         # restore the modules that have been imported with it and
         # temporarily disable the ones that would be shadowed.
@@ -148,16 +158,6 @@ class _localimport(object):
             for path_name in self.path:
                 for fn in glob.glob(os.path.join(path_name, '*.pth')):
                     self._eval_pth(fn, path_name)
-
-        # Disable all modules that can be imported from the local site
-        # but that have already been imported from another to avoid
-        # possible collisions (#12).
-        for path in sys.path:
-            for module in self._discover(path):
-                sub = module + '.'
-                for key, mod in sys.modules.items():
-                    if key == module or key.startswith(sub):
-                        self.state['disables'][key] = sys.modules.pop(key)
 
         # Add the original path to sys.path.
         sys.path += self.state['path']
