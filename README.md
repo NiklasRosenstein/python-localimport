@@ -33,10 +33,14 @@ res/modules/
 
 ```python
 # app.py
-with _localimport('res/modules'):
+with _localimport('res/modules') as _importer:
     import some_package
 assert 'some_package' not in sys.modules
 ```
+
+> **Note**: It is very important that you keep the reference to the
+> created `_localimport` object alive, especially if you do use
+> `from xx import yy` imports.
 
 ----
 
