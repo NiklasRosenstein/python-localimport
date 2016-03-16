@@ -19,9 +19,9 @@
 # THE SOFTWARE.
 
 __author__ = 'Niklas Rosenstein <rosensteinniklas@gmail.com>'
-__version__ = '1.4.13'
+__version__ = '1.4.14'
 
-import glob, os, pkgutil, sys, traceback, zipfile
+import copy, glob, os, pkgutil, sys, traceback, zipfile
 class _localimport(object):
     ''' Secure import mechanism that restores the previous global importer
     state after the context-manager exits. Modules imported from the local
@@ -96,12 +96,19 @@ class _localimport(object):
 
     def __enter__(self):
         # pkg_resources comes with setuptools.
-        try: import pkg_resources; nsdict = pkg_resources._namespace_packages.copy()
-        except ImportError: nsdict = None
+        try:
+            import pkg_resources
+            nsdict = copy.deepcopy(pkg_resources._namespace_packages)
+            declare_namespace = pkg_resources.declare_namespace
+            pkg_resources.declare_namespace = self._declare_namespace
+        except ImportError:
+            nsdict = None
+            declare_namespace = None
 
         # Save the global importer state.
         self.state = {
             'nsdict': nsdict,
+            'declare_namespace': declare_namespace,
             'nspaths': {},
             'path': sys.path[:],
             'meta_path': sys.meta_path[:],
@@ -200,6 +207,7 @@ class _localimport(object):
         pkgutil.extend_path = self.state['pkgutil.extend_path']
         try:
             import pkg_resources
+            pkg_resources.declare_namespace = self.state['declare_namespace']
             pkg_resources._namespace_packages.clear()
             pkg_resources._namespace_packages.update(self.state['nsdict'])
         except ImportError: pass
@@ -242,6 +250,16 @@ class _localimport(object):
                     line = os.path.normpath(line)
                     if line and line not in sys.path:
                         sys.path.insert(0, line)
+
+    def _declare_namespace(self, package_name):
+        ''' Mock for the original `pkg_resources.declare_namespace()`
+        function that calls `pkgutil.extend_path()` afterwards as the
+        original implementation doesn't seem to properly find all
+        available namespace paths. '''
+
+        self.state['declare_namespace'](package_name)
+        mod = sys.modules[package_name]
+        mod.__path__ = pkgutil.extend_path(mod.__path__, package_name)
 
     def _extend_path(self, pth, name):
         ''' Better implementation of `pkgutil.extend_path`  which adds

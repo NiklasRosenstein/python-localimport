@@ -1,5 +1,11 @@
 ## Changelog
 
+__v1.4.14__
+
+* Mockup `pkg_resources.declare_namespace()`, making it call
+  `pkgutil.extend_path()` afterwards to ensure we find all available
+  namespace paths
+
 __v1.4.13__
 
 * fixed possible KeyError and AttributeError when using
