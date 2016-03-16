@@ -1,5 +1,15 @@
 ## Changelog
 
+__v1.4.13__
+
+* fixed possible KeyError and AttributeError when using
+  the `_localimport.disable()` method
+
+__v1.4.12__
+
+* Removed auto discovering of modules importable from the local site
+* Add `_localimport.disable()` method
+
 __v1.4.11__
 
 * Fixed a bug where re-using the `_localimport` context added local modules

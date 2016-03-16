@@ -19,7 +19,7 @@
 # THE SOFTWARE.
 
 __author__ = 'Niklas Rosenstein <rosensteinniklas@gmail.com>'
-__version__ = '1.4.12'
+__version__ = '1.4.13'
 
 import glob, os, pkgutil, sys, traceback, zipfile
 class _localimport(object):
@@ -158,10 +158,6 @@ class _localimport(object):
             if path not in self.state['path']:
                 local_paths.append(path)
 
-        # Restore the original __path__ value of namespace packages.
-        for key, path in self.state['nspaths'].items():
-            sys.modules[key].__path__ = path
-
         # Move all meta path objects to self.meta_path that have not
         # been there before and have not been in the list before.
         for meta in sys.meta_path:
@@ -193,6 +189,10 @@ class _localimport(object):
             if parent_name and parent_name in sys.modules:
                 parent = sys.modules[parent_name]
                 setattr(parent, key.split('.')[-1], mod)
+
+        # Restore the original __path__ value of namespace packages.
+        for key, path in self.state['nspaths'].items():
+            sys.modules[key].__path__ = path
 
         # Restore the original state of the global importer.
         sys.path[:] = self.state['path']
@@ -311,14 +311,17 @@ class _localimport(object):
         modules = {}
         for key, mod in sys.modules.items():
             if key == module or key.startswith(sub_prefix):
-                try: parent_name = key.split('.')[-2]
+                try: parent_name = '.'.join(key.split('.')[:-1])
                 except IndexError: parent_name = None
 
                 # Delete the child module reference from the parent module.
                 modules[key] = mod
                 if parent_name and parent_name in sys.modules:
-                    parent = sys.modules[parent]
-                    delattr(parent, key.split('.')[0])
+                    parent = sys.modules[parent_name]
+                    try:
+                        delattr(parent, key.split('.')[-1])
+                    except AttributeError:
+                        pass
 
         # Pop all the modules we found from sys.modules
         for key, mod in modules.items():
