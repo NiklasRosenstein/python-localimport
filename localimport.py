@@ -19,14 +19,13 @@
 # THE SOFTWARE.
 
 __author__ = 'Niklas Rosenstein <rosensteinniklas@gmail.com>'
-__version__ = '1.4.11'
+__version__ = '1.4.12'
 
 import glob, os, pkgutil, sys, traceback, zipfile
 class _localimport(object):
     ''' Secure import mechanism that restores the previous global importer
     state after the context-manager exits. Modules imported from the local
     site will be moved into :attr:`_localimport.modules`.
-
     Features:
         - Supports namespace packages
         - Supports evaluating ``.pth`` files
@@ -38,57 +37,37 @@ class _localimport(object):
           imported from one of the paths specified in the ``_localimport``
           object.
         - Reusable for delayed-import.
-
     .. code-block:: python
-
         with _localimport('res/modules'):
             import some_package
-
     :param path:
-
         A string or a list of strings for the additional import paths
         that should be made available during the ``_localimport`` context.
-
     :param parent_dir:
-
         If a relative path is specified in the *path* parameter, it is
         converted to an absolute path using this path. Note that the
         ``_localimport`` is usually pasted into the application code and
         not imported, thus it makes sense for it to default to the parent
         directory of the executing Python script file.
-
     :param do_eggs:
-
         True by default. If True, ``.egg`` files in any of the specified
         *path* s will be added to :attr:`_localimport.path` as well.
-
     :param do_pth:
-
         True by default. Evaluate ``.pth`` files found in the paths.
-
     .. attribute:: path
-
         The paths from which modules should be imported.These will also be
         used to determine if a module was imported from the local site and
         wether it should be released after the localimport is complete.
-
     .. attribute:: meta_path
-
         A list of importer objects that will be prepended to `sys.meta_path`
         during the localimport. Use of meta importers is discouraged as it
         could lead to problems determining whether a module is from the local
         site.
-
     .. attribute:: modules
-
         Dictionary of the modules imported from the local site.
-
     .. attribute:: in_context
-
         True when the localimport context-manager is active.
-
     .. attribute:: do_pth
-
         If True, ``.pth`` files are evaluated on :meth:`__enter__`.
     '''
 
@@ -134,16 +113,6 @@ class _localimport(object):
         sys.path[:] = self.path
         sys.meta_path[:] = self.meta_path + sys.meta_path
         pkgutil.extend_path = self._extend_path
-
-        # Disable all modules that can be imported from the local site
-        # but that have already been imported from another to avoid
-        # possible collisions (#12).
-        for path in sys.path:
-            for module in self._discover(path):
-                sub = module + '.'
-                for key, mod in sys.modules.items():
-                    if key == module or key.startswith(sub):
-                        self.state['disables'][key] = sys.modules.pop(key)
 
         # If this function is called not the first time, we need to
         # restore the modules that have been imported with it and
@@ -216,9 +185,16 @@ class _localimport(object):
             if force_pop or (filename and self._is_local(filename, local_paths)):
                 self.modules[key] = sys.modules.pop(key)
 
-        # Bring all disabled modules back and restore the
-        # the original state.
+        # Restore the disabled modules.
         sys.modules.update(self.state['disables'])
+        for key, mod in self.state['disables'].items():
+            try: parent_name = key.split('.')[-2]
+            except IndexError: parent_name = None
+            if parent_name and parent_name in sys.modules:
+                parent = sys.modules[parent_name]
+                setattr(parent, key.split('.')[-1], mod)
+
+        # Restore the original state of the global importer.
         sys.path[:] = self.state['path']
         sys.meta_path[:] = self.state['meta_path']
         pkgutil.extend_path = self.state['pkgutil.extend_path']
@@ -308,46 +284,6 @@ class _localimport(object):
 
         return [os.path.normpath(x) for x in mod_path]
 
-    def _discover(self, pth):
-        ''' Discover all Python modules that can be imported from *pth*. '''
-
-        def del_suffix(name):
-            return name.rpartition(os.extsep)[0]
-
-        def is_py(name):
-            return any(name.endswith(s) for s in suffixes)
-
-        def is_package(path):
-            for s in suffixes:
-                fn = os.path.join(path, '__init__' + s)
-                if os.path.isfile(fn):
-                    return True
-            return False
-
-        suffixes = [os.extsep + s for s in ('py', 'pyc', 'pyo')]
-        modules = set()
-        if os.path.isdir(pth):
-            for name in os.listdir(pth):
-                if is_package(os.path.join(pth, name)):
-                    # xxx: Recursive check required?
-                    modules.add(name)
-                elif is_py(name):
-                    modules.add(del_suffix(name))
-        elif zipfile.is_zipfile(pth):
-            try:
-                egg = zipfile.ZipFile(pth, 'r')
-                for name in egg.namelist():
-                    if not is_py(name):
-                        continue
-                    name = del_suffix(name).replace('/', '.')
-                    if name.endswith('.__init__'):
-                        name = name.rpartition('.')[0]
-                    modules.add(name)
-            except (zipfile.BadZipfile, zipfile.LargeZipFile):
-                pass  # xxx: Show a warning at least?
-
-        return modules
-
     @staticmethod
     def _is_subpath(path, ask_dir):
         ''' Returns True if *path* points to the same or a
@@ -358,3 +294,33 @@ class _localimport(object):
         except ValueError:
             return False  # happens on Windows if drive letters don't match
         return relpath == os.curdir or not relpath.startswith(os.pardir)
+
+    def disable(self, module):
+        ''' This method can be called to ensure that *module*
+        and all its submodules are moved to a "disabled" state, thus
+        being temporarily removed from the global importer state.
+
+        If *module* is a list of strings, the function will be
+        called for each of its items. '''
+
+        if not isinstance(module, self._string_types):
+            [self.disable(x) for x in module]
+            return
+
+        sub_prefix = module + '.'
+        modules = {}
+        for key, mod in sys.modules.items():
+            if key == module or key.startswith(sub_prefix):
+                try: parent_name = key.split('.')[-2]
+                except IndexError: parent_name = None
+
+                # Delete the child module reference from the parent module.
+                modules[key] = mod
+                if parent_name and parent_name in sys.modules:
+                    parent = sys.modules[parent]
+                    delattr(parent, key.split('.')[0])
+
+        # Pop all the modules we found from sys.modules
+        for key, mod in modules.items():
+            del sys.modules[key]
+            self.state['disables'][key] = mod
