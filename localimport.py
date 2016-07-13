@@ -19,7 +19,7 @@
 # THE SOFTWARE.
 
 __author__ = 'Niklas Rosenstein <rosensteinniklas@gmail.com>'
-__version__ = '1.4.14'
+__version__ = '1.4.15'
 
 import copy, glob, os, pkgutil, sys, traceback, zipfile
 class _localimport(object):
@@ -199,7 +199,8 @@ class _localimport(object):
 
         # Restore the original __path__ value of namespace packages.
         for key, path in self.state['nspaths'].items():
-            sys.modules[key].__path__ = path
+            try: sys.modules[key].__path__ = path
+            except KeyError: pass
 
         # Restore the original state of the global importer.
         sys.path[:] = self.state['path']
