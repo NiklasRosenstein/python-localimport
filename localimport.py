@@ -1,4 +1,4 @@
-# Copyright (C) 2015  Niklas Rosenstein
+# Copyright (C) 2015-2016   Niklas Rosenstein
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -18,14 +18,11 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-__author__ = 'Niklas Rosenstein <rosensteinniklas@gmail.com>'
-__version__ = '1.4.15'
-
 import copy, glob, os, pkgutil, sys, traceback, zipfile
-class _localimport(object):
+class localimport(object):
     ''' Secure import mechanism that restores the previous global importer
     state after the context-manager exits. Modules imported from the local
-    site will be moved into :attr:`_localimport.modules`.
+    site will be moved into :attr:`localimport.modules`.
     Features:
         - Supports namespace packages
         - Supports evaluating ``.pth`` files
@@ -34,24 +31,22 @@ class _localimport(object):
         - Mocks :func:`pkgutil.extend_path()` to a version that also
           supports zipped Python Eggs.
         - Only moves imported modules into the shadows when they were
-          imported from one of the paths specified in the ``_localimport``
+          imported from one of the paths specified in the ``localimport``
           object.
         - Reusable for delayed-import.
     .. code-block:: python
-        with _localimport('res/modules'):
+        with localimport('res/modules'):
             import some_package
     :param path:
         A string or a list of strings for the additional import paths
-        that should be made available during the ``_localimport`` context.
+        that should be made available during the ``localimport`` context.
     :param parent_dir:
-        If a relative path is specified in the *path* parameter, it is
-        converted to an absolute path using this path. Note that the
-        ``_localimport`` is usually pasted into the application code and
-        not imported, thus it makes sense for it to default to the parent
-        directory of the executing Python script file.
+        If omitted, defaults to the parent directory of the ``__file__``
+        variable from the parent stackframe. Relative paths in the *path*
+        parameter will be considered relative to this directory.
     :param do_eggs:
         True by default. If True, ``.egg`` files in any of the specified
-        *path* s will be added to :attr:`_localimport.path` as well.
+        *path* s will be added to :attr:`localimport.path` as well.
     :param do_pth:
         True by default. Evaluate ``.pth`` files found in the paths.
     .. attribute:: path
@@ -71,21 +66,29 @@ class _localimport(object):
         If True, ``.pth`` files are evaluated on :meth:`__enter__`.
     '''
 
+    __author__ = 'Niklas Rosenstein <rosensteinniklas@gmail.com>'
+    __version__ = '1.4.16'
     _py3k = sys.version_info[0] >= 3
     _string_types = (str,) if _py3k else (basestring,)
 
-    def __init__(self, path, parent_dir=os.path.dirname(__file__), do_eggs=True, do_pth=True):
-        super(_localimport, self).__init__()
+    def __init__(self, path, parent_dir=None, do_eggs=True, do_pth=True):
+        if not parent_dir:
+            frame = sys._getframe(1).f_globals
+            if '__file__' in frame:
+              parent_dir = os.path.dirname(frame['__file__'])
+
+        # Convert relative paths to absolute paths with parent_dir and
+        # evaluate .egg files in the specified directories.
         self.path = []
         if isinstance(path, self._string_types):
             path = [path]
         for path_name in path:
             if not os.path.isabs(path_name):
+                if not parent_dir:
+                    raise ValueError('relative path but no parent_dir')
                 path_name = os.path.join(parent_dir, path_name)
-
             path_name = os.path.normpath(path_name)
             self.path.append(path_name)
-
             if do_eggs:
                 self.path.extend(glob.glob(os.path.join(path_name, '*.egg')))
 
@@ -173,7 +176,7 @@ class _localimport(object):
                     self.meta_path.append(meta)
 
         # Move all modules that shadow modules of the original system
-        # state or modules that are from any of the _localimport context
+        # state or modules that are from any of the localimport context
         # paths away.
         modules = sys.modules.copy()
         for key, mod in modules.items():
@@ -218,7 +221,7 @@ class _localimport(object):
 
     def _is_local(self, filename, pathlist):
         ''' Returns True if *filename* is a subpath of any of the paths
-        contained by the `_localimport`. This is used to determine if a
+        contained by the `localimport`. This is used to determine if a
         module was imported from the local site. '''
 
         filename = os.path.abspath(filename)
@@ -346,3 +349,8 @@ class _localimport(object):
         for key, mod in modules.items():
             del sys.modules[key]
             self.state['disables'][key] = mod
+
+__author__ = localimport.__author__
+__version__ = localimport.__version__
+exports = localimport       # for shroud.require()
+_localimport = localimport  # backwards compatibility <= 1.4.15
