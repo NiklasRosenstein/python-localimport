@@ -41,21 +41,21 @@ assert 'some_package' not in sys.modules
 > **Note**: It is very important that you keep the reference to the
 > `localimport` object alive, especially if you use `from xx import yy` imports.
 
-## Use with [shroud][]
+## Use with [require][]
 
 The `localimport` class is defines as `exports` symbols, thus when you
 `require()` the module, what you get is the class directly rather then
 the module.
 
 ```python
-from shroud import require
+import require
 localimport = require('./localimport')
 
 with localimport('res/modules') as _importer:
   # ...
 ```
 
-[shroud]: https://github.com/NiklasRosenstein/py-shroud
+[require]: https://github.com/NiklasRosenstein/py-require
 
 ## License
 

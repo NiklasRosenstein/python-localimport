@@ -352,5 +352,5 @@ class localimport(object):
 
 __author__ = localimport.__author__
 __version__ = localimport.__version__
-exports = localimport       # for shroud.require()
+exports = localimport       # for require()
 _localimport = localimport  # backwards compatibility <= 1.4.15
