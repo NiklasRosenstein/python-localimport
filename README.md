@@ -57,6 +57,49 @@ with localimport('res/modules') as _importer:
 
 [require]: https://github.com/NiklasRosenstein/py-require
 
+## Changelog
+
+#### v1.4.16
+- fix possible `KeyError` when restoring namespace module paths
+- renamed `_localimport` class to `localimport`
+- `localimport(parent_dir)` parameter is now determined dynamically
+  using `sys._getframe()`
+- support for [py-require][require]
+
+#### v1.4.14
+- Mockup `pkg_resources.declare_namespace()`, making it call
+  `pkgutil.extend_path()` afterwards to ensure we find all available
+  namespace paths
+
+#### v1.4.13
+- fixed possible KeyError and AttributeError when using
+  the `_localimport.disable()` method
+
+#### v1.4.12
+- Removed auto discovering of modules importable from the local site
+- Add `_localimport.disable()` method
+
+#### v1.4.11
+- Fixed a bug where re-using the `_localimport` context added local modules
+  back to `sys.modules` but removed them immediately (#15)
+
+#### v1.4.10
+- Fix #13, `_extend_path()` now keeps order of the paths
+- Updat class docstrings
+- Add `do_eggs` and `do_pth` parameters to the constructor
+- Fix #12, add `_discover()` method and automatic disabling of modules  that could conflict with modules from the `_localimport` site
+
+#### v1.4.9
+
+- Fix #11, remove `None`-entries of namespace packages in `sys.modules`
+- `_localimport._extend_path()` is is now less tolerant about extending
+  the namespace path and only does so when a `__init__.{py,pyc,pyo}` file
+  exists in the parsed directory
+
+#### v1.4.8
+
+* Now checks any path for being a zipfile rather than just .egg files
+
 ## License
 
 The MIT License (MIT)
