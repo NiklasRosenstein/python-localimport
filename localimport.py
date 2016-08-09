@@ -75,7 +75,7 @@ class localimport(object):
     if not parent_dir:
       frame = sys._getframe(1).f_globals
       if '__file__' in frame:
-        parent_dir = os.path.dirname(frame['__file__'])
+        parent_dir = os.path.dirname(os.path.abspath(frame['__file__']))
 
     # Convert relative paths to absolute paths with parent_dir and
     # evaluate .egg files in the specified directories.

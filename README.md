@@ -70,10 +70,13 @@ You can find pre-minified versions [here][pre-minified].
 
 ## Changelog
 
-#### 1.5
+#### v1.5
 
 - add `setup.py`
 - add `make_min` and `make_b64` commands to `setup.py`
+- fix possible error when `localimport(parent_dir)` parameter is
+  not specified and the `__file__` of the Python module that uses
+  localimport is in the current working directory
 
 #### v1.4.16
 - fix possible `KeyError` when restoring namespace module paths
