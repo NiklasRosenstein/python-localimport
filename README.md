@@ -1,22 +1,14 @@
+# localimport
 
-<p align="center">Isolated import of Python Modules for embedded applications.
-  </p>
-<h1 align="center">localimport
-  <img src="http://i.imgur.com/uuTtLzU.png"/>
-  <a href="https://gist.github.com/NiklasRosenstein/f5690d8f36bbdc8e5556"><img src="http://i.imgur.com/oMcIOs2.png"/></a></h1>
 
-`localimport` is a Python class that is used as a context manager to hook into
-the Python module importer mechanism and ensure a safe and isolated import of
-third-party modules. This is especially useful for embedded Python applications
-that are packaged with their dependencies to keep the global importer state
-clean and to avoid package collisions between plugins.
+&ndash; Isolated import of Python modules
 
 ## Features
 
-* Takes `pkg_resources` namespaces into account
-* Mocks `pkgutil.extend_path()` to support zipped Python Eggs
-* Emulates a partly isolated environment for local modules
-* Evaluates `*.pth` files
+- emulates a partly isolated environment for local modules
+- evaluates `*.pth` files
+- supports `pkg_resources` namespaces
+- mocks `pkgutil.extend_path()` to support zipped Python eggs
 
 ## Example
 
@@ -57,7 +49,31 @@ with localimport('res/modules') as _importer:
 
 [require]: https://github.com/NiklasRosenstein/py-require
 
+## Building a minified version
+
+In many cases it doesn't make much sense to use localimport as yet another
+Python package, thus you might want to include an inlined and minified
+version of it into your codebase. The `setup.py` script allows you to generate
+a base64 blob and minified version. It is recommended to install [pyminifier][]
+before using these commands (optional for `make_b64`, required for `make_min`).
+
+    python setup.py make_b64 --lw=79 --outfile=localimport.b64.py
+    python setup.py make_min --outfile=localimport.min.py
+
+The `--lw` and `--outfile` parameters are optional. If no output file is
+specified, the result will be printed to stdout.
+
+You can find pre-minified versions [here][pre-minified].
+
+[pyminifier]: https://pypi.python.org/pypi/pyminifier
+[pre-minified]: http://bitly.com/localimport-min
+
 ## Changelog
+
+#### 1.5
+
+- add `setup.py`
+- add `make_min` and `make_b64` commands to `setup.py`
 
 #### v1.4.16
 - fix possible `KeyError` when restoring namespace module paths

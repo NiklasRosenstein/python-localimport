@@ -67,7 +67,7 @@ class localimport(object):
   '''
 
   __author__ = 'Niklas Rosenstein <rosensteinniklas@gmail.com>'
-  __version__ = '1.4.16'
+  __version__ = '1.5'
   _py3k = sys.version_info[0] >= 3
   _string_types = (str,) if _py3k else (basestring,)
 
@@ -349,8 +349,9 @@ class localimport(object):
     for key, mod in modules.items():
       del sys.modules[key]
       self.state['disables'][key] = mod
+#<endmin
 
 __author__ = localimport.__author__
 __version__ = localimport.__version__
-exports = localimport     # for require()
+exports = localimport       # for require()
 _localimport = localimport  # backwards compatibility <= 1.4.15
