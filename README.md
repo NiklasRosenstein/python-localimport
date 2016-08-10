@@ -53,19 +53,17 @@ with localimport('res/modules') as _importer:
 
 In many cases it doesn't make much sense to use localimport as yet another
 Python package, thus you might want to include an inlined and minified
-version of it into your codebase. The `setup.py` script allows you to generate
-a base64 blob and minified version. It is recommended to install [pyminifier][]
-before using these commands (optional for `make_b64`, required for `make_min`).
+version of it into your codebase. For this you can use either [pyminifier][]
+or [py-blobbify][] depending on what format you want to include into your
+code.
 
-    python setup.py make_b64 --lw=79 --outfile=localimport.b64.py
-    python setup.py make_min --outfile=localimport.min.py
-
-The `--lw` and `--outfile` parameters are optional. If no output file is
-specified, the result will be printed to stdout.
+    $ pyminifier localimport.py
+    $ py-blobbify localimport.py --export-symbol=localimport -mc
 
 You can find pre-minified versions [here][pre-minified].
 
 [pyminifier]: https://pypi.python.org/pypi/pyminifier
+[py-blobbify]: https://pypi.python.org/pypi/py-blobbify
 [pre-minified]: http://bitly.com/localimport-min
 
 ## Changelog
