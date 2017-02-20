@@ -68,6 +68,10 @@ You can find pre-minified versions [here][pre-minified].
 
 ## Changelog
 
+#### v1.5.1
+
+- add Python 3 compatibility
+
 #### v1.5
 
 - add `setup.py`

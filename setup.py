@@ -15,7 +15,7 @@ def restify():
 
 setup(
   name = "localimport",
-  version = "1.5",
+  version = "1.5.1",
   description = "Isolated import of Python Modules",
   long_description = restify(),
   author = "Niklas Rosenstein",

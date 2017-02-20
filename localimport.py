@@ -67,7 +67,7 @@ class localimport(object):
   '''
 
   __author__ = 'Niklas Rosenstein <rosensteinniklas@gmail.com>'
-  __version__ = '1.5'
+  __version__ = '1.5.1'
   _py3k = sys.version_info[0] >= 3
   _string_types = (str,) if _py3k else (basestring,)
 
@@ -150,7 +150,7 @@ class localimport(object):
         if hasattr(sys.modules.get(prefix), '__path__'):
           del sys.modules[key]
       elif hasattr(mod, '__path__'):
-        self.state['nspaths'][key] = mod.__path__[:]
+        self.state['nspaths'][key] = copy.copy(mod.__path__)
         mod.__path__ = pkgutil.extend_path(mod.__path__, mod.__name__)
 
     self.in_context = True
@@ -242,7 +242,7 @@ class localimport(object):
         if line.startswith('import'):
           line_fn = '{0}#{1}'.format(filename, index + 1)
           try:
-            exec compile(line, line_fn, 'exec')
+            exec(compile(line, line_fn, 'exec'))
           except BaseException:
             traceback.print_exc()
         else:
