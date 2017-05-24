@@ -19,6 +19,14 @@
 # THE SOFTWARE.
 
 import copy, glob, os, pkgutil, sys, traceback, zipfile
+
+if sys.version_info[0] == 2:
+  def items(x): return x.items()
+  def iteritems(x): return x.iteritems()
+else:
+  def items(x): return list(x.items())
+  def iteritems(x): return x.items()
+
 class localimport(object):
   ''' Secure import mechanism that restores the previous global importer
   state after the context-manager exits. Modules imported from the local
@@ -127,7 +135,7 @@ class localimport(object):
     # If this function is called not the first time, we need to
     # restore the modules that have been imported with it and
     # temporarily disable the ones that would be shadowed.
-    for key, mod in self.modules.items():
+    for key, mod in items(self.modules):
       try: self.state['disables'][key] = sys.modules.pop(key)
       except KeyError: pass
       sys.modules[key] = mod
@@ -142,7 +150,7 @@ class localimport(object):
     sys.path += self.state['path']
 
     # Update the __path__ of all namespace modules.
-    for key, mod in sys.modules.items():
+    for key, mod in items(sys.modules):
       if mod is None:
         # Relative imports could have lead to None-entries in
         # sys.modules. Get rid of them so they can be re-evaluated.
@@ -179,7 +187,7 @@ class localimport(object):
     # state or modules that are from any of the localimport context
     # paths away.
     modules = sys.modules.copy()
-    for key, mod in modules.items():
+    for key, mod in iteritems(modules):
       force_pop = False
       filename = getattr(mod, '__file__', None)
       if not filename and key not in sys.builtin_module_names:
@@ -193,7 +201,7 @@ class localimport(object):
 
     # Restore the disabled modules.
     sys.modules.update(self.state['disables'])
-    for key, mod in self.state['disables'].items():
+    for key, mod in iteritems(self.state['disables']):
       try: parent_name = key.split('.')[-2]
       except IndexError: parent_name = None
       if parent_name and parent_name in sys.modules:
@@ -201,7 +209,7 @@ class localimport(object):
         setattr(parent, key.split('.')[-1], mod)
 
     # Restore the original __path__ value of namespace packages.
-    for key, path in self.state['nspaths'].items():
+    for key, path in iteritems(self.state['nspaths']):
       try: sys.modules[key].__path__ = path
       except KeyError: pass
 
@@ -331,7 +339,7 @@ class localimport(object):
 
     sub_prefix = module + '.'
     modules = {}
-    for key, mod in sys.modules.items():
+    for key, mod in iteritems(sys.modules):
       if key == module or key.startswith(sub_prefix):
         try: parent_name = '.'.join(key.split('.')[:-1])
         except IndexError: parent_name = None
@@ -346,7 +354,7 @@ class localimport(object):
             pass
 
     # Pop all the modules we found from sys.modules
-    for key, mod in modules.items():
+    for key, mod in iteritems(modules):
       del sys.modules[key]
       self.state['disables'][key] = mod
 #<endmin
