@@ -81,7 +81,7 @@ class localimport(object):
   '''
 
   __author__ = 'Niklas Rosenstein <rosensteinniklas@gmail.com>'
-  __version__ = '1.5.1'
+  __version__ = '1.5.2'
   _py3k = sys.version_info[0] >= 3
   _string_types = (str,) if _py3k else (basestring,)
 
