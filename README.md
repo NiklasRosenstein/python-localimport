@@ -68,6 +68,11 @@ You can find pre-minified versions [here][pre-minified].
 
 ## Changelog
 
+#### v1.5.2
+
+- fix #17 where `sys.modules` changed size during iteration in
+  `localimport.__enter__()` (Python 3)
+
 #### v1.5.1
 
 - add Python 3 compatibility
