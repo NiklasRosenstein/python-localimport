@@ -21,11 +21,17 @@
 import copy, glob, os, pkgutil, sys, traceback, zipfile
 
 if sys.version_info[0] == 2:
-  def items(x): return x.items()
-  def iteritems(x): return x.iteritems()
+  # FIXME: pyminifier introduces an additional, badly indented 'pass'
+  # statement to single line functions. See pyminifier#89
+  def items(x):
+    return x.items()
+  def iteritems(x):
+    return x.iteritems()
 else:
-  def items(x): return list(x.items())
-  def iteritems(x): return x.items()
+  def items(x):
+    return list(x.items())
+  def iteritems(x):
+    return x.items()
 
 class localimport(object):
   ''' Secure import mechanism that restores the previous global importer
