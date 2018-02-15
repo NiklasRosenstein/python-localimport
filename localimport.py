@@ -1,4 +1,6 @@
-# Copyright (C) 2015-2016   Niklas Rosenstein
+# The MIT License (MIT)
+#
+# Copyright (c) 2018 Niklas Rosenstein
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -7,18 +9,24 @@
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
 #
-# The above copyright notice and this permission notice shall be included in
-# all copies or substantial portions of the Software.
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
 #
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 # AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-# THE SOFTWARE.
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
 
-import copy, glob, os, pkgutil, sys, traceback, zipfile
+import copy
+import glob
+import os
+import pkgutil
+import sys
+import traceback
+import zipfile
 
 if sys.version_info[0] == 2:
   # FIXME: pyminifier introduces an additional, badly indented 'pass'
@@ -34,9 +42,11 @@ else:
     return x.items()
 
 class localimport(object):
-  ''' Secure import mechanism that restores the previous global importer
+  '''
+  Secure import mechanism that restores the previous global importer
   state after the context-manager exits. Modules imported from the local
   site will be moved into :attr:`localimport.modules`.
+
   Features:
     - Supports namespace packages
     - Supports evaluating ``.pth`` files
@@ -48,9 +58,11 @@ class localimport(object):
       imported from one of the paths specified in the ``localimport``
       object.
     - Reusable for delayed-import.
+
   .. code-block:: python
     with localimport('res/modules'):
       import some_package
+
   :param path:
     A string or a list of strings for the additional import paths
     that should be made available during the ``localimport`` context.
@@ -367,5 +379,4 @@ class localimport(object):
 
 __author__ = localimport.__author__
 __version__ = localimport.__version__
-exports = localimport       # for require()
 _localimport = localimport  # backwards compatibility <= 1.4.15
