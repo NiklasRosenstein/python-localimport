@@ -1,16 +1,17 @@
-# localimport
+## localimport
 
+<img src="https://img.shields.io/badge/License-MIT-yellow.svg" align="right">
 
 &ndash; Isolated import of Python modules
 
-## Features
+### Features
 
-- emulates a partly isolated environment for local modules
-- evaluates `*.pth` files
-- supports `pkg_resources` namespaces
-- mocks `pkgutil.extend_path()` to support zipped Python eggs
+- Emulates a partly isolated environment for local modules
+- Evaluates `*.pth` files
+- Supports `pkg_resources` namespaces
+- Mocks `pkgutil.extend_path()` to support zipped Python eggs
 
-## Example
+### Example
 
 Given your Python script, application or plugin comes with a directory that
 contains modules for import, you can use localimport to keep the global
@@ -26,30 +27,14 @@ res/modules/
 ```python
 # app.py
 with localimport('res/modules') as _importer:
-    import some_package
+  import some_package
 assert 'some_package' not in sys.modules
 ```
 
-> **Note**: It is very important that you keep the reference to the
-> `localimport` object alive, especially if you use `from xx import yy` imports.
+> **Important**: You must keep the reference to the `localimport` object alive,
+> especially if you use `from xx import yy` imports.
 
-## Use with [require][]
-
-The `localimport` class is defines as `exports` symbols, thus when you
-`require()` the module, what you get is the class directly rather then
-the module.
-
-```python
-import require
-localimport = require('./localimport')
-
-with localimport('res/modules') as _importer:
-  # ...
-```
-
-[require]: https://github.com/NiklasRosenstein/py-require
-
-## Building a minified version
+### Building a minified version
 
 In many cases it doesn't make much sense to use localimport as yet another
 Python package, thus you might want to include an inlined and minified
@@ -57,8 +42,8 @@ version of it into your codebase. For this you can use either [pyminifier][]
 or [py-blobbify][] depending on what format you want to include into your
 code.
 
-    $ pyminifier localimport.py
-    $ py-blobbify localimport.py --export-symbol=localimport -mc
+    pyminifier localimport.py
+    py-blobbify localimport.py --export-symbol=localimport -mc
 
 You can find pre-minified versions [here][pre-minified].
 
