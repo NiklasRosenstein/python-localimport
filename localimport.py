@@ -41,6 +41,103 @@ else:
   def iteritems(x):
     return x.items()
 
+
+def is_local(filename, pathlist):
+  '''
+  Returns True if *filename* is a subpath of any of the paths in *pathlist*.
+  '''
+
+  filename = os.path.abspath(filename)
+  for path_name in pathlist:
+    path_name = os.path.abspath(path_name)
+    if is_subpath(filename, path_name):
+      return True
+  return False
+
+
+def is_subpath(path, parent):
+  '''
+  Returns True if *path* points to the same or a subpath of *parent*.
+  '''
+
+  try:
+    relpath = os.path.relpath(path, parent)
+  except ValueError:
+    return False  # happens on Windows if drive letters don't match
+  return relpath == os.curdir or not relpath.startswith(os.pardir)
+
+
+def eval_pth(filename, sitedir):
+  '''
+  Evaluates a `.pth` file (including support for `import` statements), and
+  appends the result  to `sys.path`.
+  '''
+
+  if not os.path.isfile(filename):
+    return
+  with open(filename, 'r') as fp:
+    for index, line in enumerate(fp):
+      if line.startswith('import'):
+        line_fn = '{0}#{1}'.format(filename, index + 1)
+        try:
+          exec(compile(line, line_fn, 'exec'))
+        except BaseException:
+          traceback.print_exc()
+      else:
+        index = line.find('#')
+        if index > 0: line = line[:index]
+        line = line.strip()
+        if not os.path.isabs(line):
+          line = os.path.join(os.path.dirname(filename), line)
+        line = os.path.normpath(line)
+        if line and line not in sys.path:
+          sys.path.insert(0, line)
+
+
+def extend_path(pth, name):
+  '''
+  Better implementation of #pkgutil.extend_path()  which adds support for
+  zipped Python eggs. The original #pkgutil.extend_path() gets mocked by this
+  function inside the #localimport context.
+  '''
+
+  def zip_isfile(z, name):
+    name.rstrip('/')
+    return name in z.namelist()
+
+  pname = os.path.join(*name.split('.'))
+  zname = '/'.join(name.split('.'))
+  init_py = '__init__' + os.extsep + 'py'
+  init_pyc = '__init__' + os.extsep + 'pyc'
+  init_pyo = '__init__' + os.extsep + 'pyo'
+
+  mod_path = list(pth)
+  for path in sys.path:
+    if zipfile.is_zipfile(path):
+      try:
+        egg = zipfile.ZipFile(path, 'r')
+        addpath = (
+          zip_isfile(egg, zname + '/__init__.py') or
+          zip_isfile(egg, zname + '/__init__.pyc') or
+          zip_isfile(egg, zname + '/__init__.pyo'))
+        fpath = os.path.join(path, path, zname)
+        if addpath and fpath not in mod_path:
+          mod_path.append(fpath)
+      except (zipfile.BadZipfile, zipfile.LargeZipFile):
+        pass  # xxx: Show a warning at least?
+    else:
+      path = os.path.join(path, pname)
+      if os.path.isdir(path) and path not in mod_path:
+        addpath = (
+          os.path.isfile(os.path.join(path, init_py)) or
+          os.path.isfile(os.path.join(path, init_pyc)) or
+          os.path.isfile(os.path.join(path, init_pyo)))
+        if addpath and path not in mod_path:
+          mod_path.append(path)
+
+  return [os.path.normpath(x) for x in mod_path]
+
+
 class localimport(object):
   '''
   Secure import mechanism that restores the previous global importer
@@ -148,7 +245,7 @@ class localimport(object):
     # Update the systems meta path and apply function mocks.
     sys.path[:] = self.path
     sys.meta_path[:] = self.meta_path + sys.meta_path
-    pkgutil.extend_path = self._extend_path
+    pkgutil.extend_path = extend_path
 
     # If this function is called not the first time, we need to
     # restore the modules that have been imported with it and
@@ -162,7 +259,7 @@ class localimport(object):
     if self.do_pth:
       for path_name in self.path:
         for fn in glob.glob(os.path.join(path_name, '*.pth')):
-          self._eval_pth(fn, path_name)
+          eval_pth(fn, path_name)
 
     # Add the original path to sys.path.
     sys.path += self.state['path']
@@ -217,7 +314,7 @@ class localimport(object):
           filename = getattr(modules[parent], '__file__', None)
         else:
           force_pop = True
-      if force_pop or (filename and self._is_local(filename, local_paths)):
+      if force_pop or (filename and is_local(filename, local_paths)):
         self.modules[key] = sys.modules.pop(key)
 
     # Restore the disabled modules.
@@ -248,111 +345,26 @@ class localimport(object):
     self.in_context = False
     del self.state
 
-  def _is_local(self, filename, pathlist):
-    ''' Returns True if *filename* is a subpath of any of the paths
-    contained by the `localimport`. This is used to determine if a
-    module was imported from the local site. '''
-
-    filename = os.path.abspath(filename)
-    for path_name in pathlist:
-      path_name = os.path.abspath(path_name)
-      if self._is_subpath(filename, path_name):
-        return True
-    return False
-
-  def _eval_pth(self, filename, sitedir):
-    '''  Evaluates a `.pth` file (supporting `import` statements),
-    and appends the result  to `sys.path`. Called from `__enter__()`. '''
-
-    if not os.path.isfile(filename):
-      return
-    with open(filename, 'r') as fp:
-      for index, line in enumerate(fp):
-        if line.startswith('import'):
-          line_fn = '{0}#{1}'.format(filename, index + 1)
-          try:
-            exec(compile(line, line_fn, 'exec'))
-          except BaseException:
-            traceback.print_exc()
-        else:
-          index = line.find('#')
-          if index > 0: line = line[:index]
-          line = line.strip()
-          if not os.path.isabs(line):
-            line = os.path.join(os.path.dirname(filename), line)
-          line = os.path.normpath(line)
-          if line and line not in sys.path:
-            sys.path.insert(0, line)
-
   def _declare_namespace(self, package_name):
-    ''' Mock for the original `pkg_resources.declare_namespace()`
-    function that calls `pkgutil.extend_path()` afterwards as the
-    original implementation doesn't seem to properly find all
-    available namespace paths. '''
+    '''
+    Mock for #pkg_resources.declare_namespace() which calls
+    #pkgutil.extend_path() afterwards as the original implementation doesn't
+    seem to properly find all available namespace paths.
+    '''
 
     self.state['declare_namespace'](package_name)
     mod = sys.modules[package_name]
     mod.__path__ = pkgutil.extend_path(mod.__path__, package_name)
 
-  def _extend_path(self, pth, name):
-    ''' Better implementation of `pkgutil.extend_path`  which adds
-    support for zipped Python eggs. The original `pkgutil.extend_path`
-    gets mocked by this function inside the localimport context. '''
-
-    def zip_isfile(z, name):
-      name.rstrip('/')
-      return name in z.namelist()
-
-    pname = os.path.join(*name.split('.'))
-    zname = '/'.join(name.split('.'))
-    init_py = '__init__' + os.extsep + 'py'
-    init_pyc = '__init__' + os.extsep + 'pyc'
-    init_pyo = '__init__' + os.extsep + 'pyo'
-
-    mod_path = list(pth)
-    for path in sys.path:
-      if zipfile.is_zipfile(path):
-        try:
-          egg = zipfile.ZipFile(path, 'r')
-          addpath = (
-            zip_isfile(egg, zname + '/__init__.py') or
-            zip_isfile(egg, zname + '/__init__.pyc') or
-            zip_isfile(egg, zname + '/__init__.pyo'))
-          fpath = os.path.join(path, path, zname)
-          if addpath and fpath not in mod_path:
-            mod_path.append(fpath)
-        except (zipfile.BadZipfile, zipfile.LargeZipFile):
-          pass  # xxx: Show a warning at least?
-      else:
-        path = os.path.join(path, pname)
-        if os.path.isdir(path) and path not in mod_path:
-          addpath = (
-            os.path.isfile(os.path.join(path, init_py)) or
-            os.path.isfile(os.path.join(path, init_pyc)) or
-            os.path.isfile(os.path.join(path, init_pyo)))
-          if addpath and path not in mod_path:
-            mod_path.append(path)
-
-    return [os.path.normpath(x) for x in mod_path]
-
-  @staticmethod
-  def _is_subpath(path, ask_dir):
-    ''' Returns True if *path* points to the same or a
-    subpathof *ask_dir*. '''
-
-    try:
-      relpath = os.path.relpath(path, ask_dir)
-    except ValueError:
-      return False  # happens on Windows if drive letters don't match
-    return relpath == os.curdir or not relpath.startswith(os.pardir)
-
   def disable(self, module):
-    ''' This method can be called to ensure that *module*
-    and all its submodules are moved to a "disabled" state, thus
-    being temporarily removed from the global importer state.
+    '''
+    This method can be called to ensure that *module* and all its submodules
+    are moved to a "disabled" state, thus being temporarily removed from the
+    global importer state.
 
-    If *module* is a list of strings, the function will be
-    called for each of its items. '''
+    If *module* is a list of strings, the function will be called for each of
+    its items.
+    '''
 
     if not isinstance(module, self._string_types):
       [self.disable(x) for x in module]

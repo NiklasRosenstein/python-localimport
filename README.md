@@ -53,6 +53,12 @@ You can find pre-minified versions [here][pre-minified].
 
 ## Changelog
 
+#### v1.5.3 (current)
+
+- fix issue when the current working directory is used as one of the
+  localimport paths
+- move non-member functions to global scope, out of the localimport class
+
 #### v1.5.2
 
 - fix #17 where `sys.modules` changed size during iteration in
