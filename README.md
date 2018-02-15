@@ -1,14 +1,15 @@
-## localimport
 
 <img src="https://img.shields.io/badge/License-MIT-yellow.svg" align="right">
-
-&ndash; Isolated import of Python modules
+<p align="center">
+  <b>localimport</b> allows you to import Python modules in an</br>
+  isolated environment, preserving the global importer state.
+</p>
 
 ### Features
 
-- Emulates a partly isolated environment for local modules
+- Emulates an isolated environment for Python module imports
 - Evaluates `*.pth` files
-- Supports `pkg_resources` namespaces
+- Compatible with `pkg_resources` namespaces
 - Mocks `pkgutil.extend_path()` to support zipped Python eggs
 
 ### Example
