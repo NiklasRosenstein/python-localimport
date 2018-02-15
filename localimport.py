@@ -95,7 +95,7 @@ class localimport(object):
     # evaluate .egg files in the specified directories.
     self.path = []
     if isinstance(path, self._string_types):
-      path = [path]
+      self.path = [path]
     for path_name in path:
       if not os.path.isabs(path_name):
         if not parent_dir:
