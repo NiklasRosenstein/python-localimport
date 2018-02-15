@@ -56,6 +56,7 @@ You can find pre-minified versions [here][pre-minified].
 
 #### v1.5.3 (current)
 
+- fix #19 -- read `README.rst` as UTF-8 in setup.py
 - fix issue when the current working directory is used as one of the
   localimport paths
 - move non-member functions to global scope, out of the localimport class
