@@ -193,6 +193,9 @@ class localimport(object):
     for path in sys.path:
       if path not in self.state['path']:
         local_paths.append(path)
+    for path in self.path:
+      if path not in local_paths:
+        local_paths.append(path)
 
     # Move all meta path objects to self.meta_path that have not
     # been there before and have not been in the list before.
