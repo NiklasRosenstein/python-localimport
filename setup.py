@@ -8,8 +8,7 @@ def restify():
   if os.path.isfile('README.md'):
     if os.system('pandoc -s README.md -o README.rst') != 0:
       print('----------------------------------------------------------')
-      print(
-        'WARNING: pandoc command failed, could not restify README.md')
+      print('WARNING: pandoc command failed, could not restify README.md')
       print('----------------------------------------------------------')
       if sys.stdout.isatty():
         if sys.version_info[0] >= 3:
