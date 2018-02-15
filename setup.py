@@ -1,3 +1,4 @@
+import codecs
 import os
 import sys
 
@@ -16,7 +17,7 @@ def restify():
         else:
           raw_input("Enter to continue... ")
     else:
-      with open('README.rst') as fp:
+      with codecs.open('README.rst', encoding='utf8') as fp:
         return fp.read()
 
 
