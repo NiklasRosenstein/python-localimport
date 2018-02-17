@@ -20,6 +20,9 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+__author__ = 'Niklas Rosenstein <rosensteinniklas@gmail.com>'
+__version__ = '1.5.2'
+
 import copy
 import glob
 import os
@@ -189,8 +192,6 @@ class localimport(object):
     If True, ``.pth`` files are evaluated on :meth:`__enter__`.
   '''
 
-  __author__ = 'Niklas Rosenstein <rosensteinniklas@gmail.com>'
-  __version__ = '1.5.2'
   _py3k = sys.version_info[0] >= 3
   _string_types = (str,) if _py3k else (basestring,)
 
@@ -390,8 +391,3 @@ class localimport(object):
     for key, mod in iteritems(modules):
       del sys.modules[key]
       self.state['disables'][key] = mod
-#<endmin
-
-__author__ = localimport.__author__
-__version__ = localimport.__version__
-_localimport = localimport  # backwards compatibility <= 1.4.15
