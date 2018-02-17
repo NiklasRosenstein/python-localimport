@@ -21,7 +21,7 @@
 # SOFTWARE.
 
 __author__ = 'Niklas Rosenstein <rosensteinniklas@gmail.com>'
-__version__ = '1.5.2'
+__version__ = '1.6.0'
 
 import copy
 import glob
