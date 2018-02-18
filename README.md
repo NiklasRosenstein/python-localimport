@@ -55,7 +55,6 @@ Depending on your application, you may want to use a bootstrapper entry point.
 # @@@ minified localimport here @@@
 
 with localimport('.') as _importer:
-  _importer.disable('my_application_package')
   from my_application_package.__main__ import main
   main()
 ```
