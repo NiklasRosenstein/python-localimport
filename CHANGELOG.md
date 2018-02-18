@@ -1,3 +1,8 @@
+#### 1.7.1
+
+- Fix `localimport.autodisable()` for Python 2 (where
+  `pkgutil.walk_packages()` yields tuples instead of namedtuples).
+
 #### 1.7.0
 
 - Add `localimport(do_autodisable)` parameter which defaults to `True` *(Note:

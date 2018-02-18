@@ -342,5 +342,5 @@ class localimport(object):
       self.state['disables'][key] = mod
 
   def autodisable(self):
-    for mod in self.discover():
-      self.disable(mod.name)
+    for loader, name, ispkg in self.discover():
+      self.disable(name)
