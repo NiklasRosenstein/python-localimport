@@ -1,4 +1,4 @@
-import codecs
+import io
 import os
 import re
 import sys
@@ -18,12 +18,12 @@ def restify():
         else:
           raw_input("Enter to continue... ")
     else:
-      with codecs.open('README.rst', encoding='utf8') as fp:
+      with io.open('README.rst', encoding='utf8') as fp:
         text = fp.read()
       # Remove ".. raw:: html\n\n    ....\n" stuff, it results from using
       # raw HTML in Markdown but can not be properly rendered in PyPI.
       text = re.sub('..\s*raw::\s*html\s*\n\s*\n\s+[^\n]+\n', '', text, re.M)
-      with codecs.open('README.rst', 'w', encoding='utf8') as fp:
+      with io.open('README.rst', 'w', encoding='utf8') as fp:
         fp.write(text)
       return text
 
@@ -35,6 +35,7 @@ setup(
   long_description=restify(),
   author="Niklas Rosenstein",
   author_email="rosensteinniklas@gmail.com",
+  url='https://github.com/NiklasRosenstein/localimport',
   py_modules=["localimport"],
   keywords=["import", "embedded", "modules", "packages"],
   classifiers=[
