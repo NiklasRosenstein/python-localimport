@@ -1,3 +1,10 @@
+#### 1.7.0
+
+- Add `localimport(do_autodisable)` parameter which defaults to `True` *(Note:
+  different semantics apply)*
+- Add `localimport.discover()`
+- Add `localimport.autodisable()`
+
 #### 1.6.1
 
 - Update setup.py to adjust README.rst for PyPI

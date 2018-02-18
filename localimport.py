@@ -146,7 +146,8 @@ class localimport(object):
   _py3k = sys.version_info[0] >= 3
   _string_types = (str,) if _py3k else (basestring,)
 
-  def __init__(self, path, parent_dir=None, do_eggs=True, do_pth=True):
+  def __init__(self, path, parent_dir=None, do_eggs=True, do_pth=True,
+               do_autodisable=True):
     if not parent_dir:
       frame = sys._getframe(1).f_globals
       if '__file__' in frame:
@@ -171,6 +172,7 @@ class localimport(object):
     self.modules = {}
     self.do_pth = do_pth
     self.in_context = False
+    self.do_autodisable = do_autodisable
 
   def __enter__(self):
     # pkg_resources comes with setuptools.
@@ -229,6 +231,8 @@ class localimport(object):
         mod.__path__ = pkgutil.extend_path(mod.__path__, mod.__name__)
 
     self.in_context = True
+    if self.do_autodisable:
+      self.autodisable()
     return self
 
   def __exit__(self, *__):
@@ -308,16 +312,10 @@ class localimport(object):
     mod = sys.modules[package_name]
     mod.__path__ = pkgutil.extend_path(mod.__path__, package_name)
 
+  def discover(self):
+    return pkgutil.walk_packages(self.path)
+
   def disable(self, module):
-    '''
-    This method can be called to ensure that *module* and all its submodules
-    are moved to a "disabled" state, thus being temporarily removed from the
-    global importer state.
-
-    If *module* is a list of strings, the function will be called for each of
-    its items.
-    '''
-
     if not isinstance(module, self._string_types):
       [self.disable(x) for x in module]
       return
@@ -342,3 +340,7 @@ class localimport(object):
     for key, mod in iteritems(modules):
       del sys.modules[key]
       self.state['disables'][key] = mod
+
+  def autodisable(self):
+    for mod in self.discover():
+      self.disable(mod.name)

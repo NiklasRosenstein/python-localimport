@@ -67,47 +67,65 @@ with localimport('.') as _importer:
 
 ### API
 
-#### `localimport(path, parent_dir=None, do_eggs=True, do_pth=True)`
+#### `localimport(path, parent_dir=None, do_eggs=True, do_pth=True, do_autodisable=True)`
 
-A context manager that creates an isolated environment for importing
-Python modules. Once the context manager exits, the previous global
-state is restored.
+> A context manager that creates an isolated environment for importing
+> Python modules. Once the context manager exits, the previous global
+> state is restored.
+>
+> Note that the context can be entered multiple times, but it is not recommended
+> generally as the only case where you would want to do that is inside a piece
+> of code that gets executed delayed (eg. a function) which imports a module,
+> and building the isolated environment and restoring to the previous state has
+> some performance impacts.
+>
+> Also note that the context will only remove packages on exit that have
+> actually been imported from the list of paths specified in the *path*
+> argument, but not modules from the standard library, for example.
+>
+> __Parameters__
+>
+> * *path* &ndash; A list of paths that are added to `sys.path` inside the
+>   context manager. Can also be a single string. If one or more relative
+>   paths are passed, they are treated relative to the *parent_dir* argument.
+> * *parent_dir* &ndash; A path that is concatenated with relative paths passed
+>   to the *path* argument. If this argument is omitted or `None`, it will
+>   default to the parent directory of the file that called the `localimport()`
+>   constructor (using `sys._getframe(1).f_globals['__file__']`).
+> * *do_eggs* &ndash; A boolean that indicates whether `.egg` files or
+>   directories found in the additional paths are added to `sys.path`.
+> * *do_pth* &ndash; A boolean that indicates whether `.pth` files found
+>   in the additional paths will be evaluated.
+> * *do_autodisable* &ndash; A boolean that indicates that `localimport.autodisable()`
+>   should be called automatically be the context manager.
+>
+> *Changed in 1.7* Added `do_autodisable` parameter.
 
-Note that the context can be entered multiple times, but it is not recommended
-generally as the only case where you would want to do that is inside a piece
-of code that gets executed delayed (eg. a function) which imports a module,
-and building the isolated environment and restoring to the previous state has
-some performance impacts.
+#### `localimport.autodisable()`
 
-Also note that the context will only remove packages on exit that have
-actually been imported from the list of paths specified in the *path*
-argument, but not modules from the standard library, for example.
-
-_Parameters_
-
-* `path` &ndash; A list of paths that are added to `sys.path` inside the
-  context manager. Can also be a single string. If one or more relative
-  paths are passed, they are treated relative to the *parent_dir* argument.
-* `parent_dir` &ndash; A path that is concatenated with relative paths passed
-  to the *path* argument. If this argument is omitted or `None`, it will
-  default to the parent directory of the file that called the `localimport()`
-  constructor (using `sys._getframe(1).f_globals['__file__']`)
-* `do_eggs` &ndash; A boolean that indicates whether `.egg` files or
-  directories found in the additional paths are added to `sys.path`.
-  Defaults to `True`.
-* `do_pth` &ndash; A boolean that indicates whether `.pth` files found
-  in the additional paths will be evaluated. Defaults to `True`.
+> Uses `localimport.discover()` to automatically detect modules that could be
+> imported from the paths in the importer context and calls #disable on all
+> of them.
+>
+> *New in 1.7*
 
 #### `localimport.disable(modules)`
 
-Disable one or more modules by moving them from the global module cache
-(`sys.modules`) to a dictionary of temporary hidden modules in the isolated
-environment. Once the `localimport()` context manager exits, these modules
-will be restored. Does nothing when a module does not exist.
 
-_Parameters_
+> Disable one or more modules by moving them from the global module cache
+> (`sys.modules`) to a dictionary of temporary hidden modules in the isolated
+> environment. Once the `localimport()` context manager exits, these modules
+> will be restored. Does nothing when a module does not exist.
+>
+> __Parameters__
+>
+> * *modules* &ndash; A list of module names or a single module name string.
 
-* `modules` &ndash; A list of module names or a single module name string.
+#### `localimport.discover()`
+
+> A shorthand for `pkgutil.walk_packages(importer.path)`.
+>
+> *New in 1.7*
 
 ---
 
