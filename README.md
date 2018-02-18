@@ -44,7 +44,7 @@ The solution is to use the `localimport` source code directly in your
 application code. Usually you will use a minified version.
 
 Pre-minified versions of `localimport` can be found in this [Gist][pre-minified].
-Of course you can minify the code by yourself, for example using the [`nr`][nr]
+Of course you can minify the code by yourself, for example using the [nr][nr]
 command-line tools.
 
     nr py.blob localimport.py -cm > localimport-gzb64-w80.py
