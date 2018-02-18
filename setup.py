@@ -1,5 +1,6 @@
 import codecs
 import os
+import re
 import sys
 
 from setuptools import setup
@@ -18,7 +19,13 @@ def restify():
           raw_input("Enter to continue... ")
     else:
       with codecs.open('README.rst', encoding='utf8') as fp:
-        return fp.read()
+        text = fp.read()
+      # Remove ".. raw:: html\n\n    ....\n" stuff, it results from using
+      # raw HTML in Markdown but can not be properly rendered in PyPI.
+      text = re.sub('..\s*raw::\s*html\s*\n\s*\n\s+[^\n]+\n', '', text, re.M)
+      with codecs.open('README.rst', 'w', encoding='utf8') as fp:
+        fp.write(text)
+      return text
 
 
 setup(

@@ -1,4 +1,8 @@
-#### v1.6
+#### 1.6.1
+
+- Update setup.py to adjust README.rst for PyPI
+
+#### v1.6.0
 
 - fix #19 -- read `README.rst` as UTF-8 in setup.py
 - fix issue when the current working directory is used as one of the
