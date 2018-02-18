@@ -142,55 +142,6 @@ def extend_path(pth, name):
 
 
 class localimport(object):
-  '''
-  Secure import mechanism that restores the previous global importer
-  state after the context-manager exits. Modules imported from the local
-  site will be moved into :attr:`localimport.modules`.
-
-  Features:
-    - Supports namespace packages
-    - Supports evaluating ``.pth`` files
-    - Automatically adds ``.egg`` files to the ``path`` when they are
-      found in one of the directories specified on initialization.
-    - Mocks :func:`pkgutil.extend_path()` to a version that also
-      supports zipped Python Eggs.
-    - Only moves imported modules into the shadows when they were
-      imported from one of the paths specified in the ``localimport``
-      object.
-    - Reusable for delayed-import.
-
-  .. code-block:: python
-    with localimport('res/modules'):
-      import some_package
-
-  :param path:
-    A string or a list of strings for the additional import paths
-    that should be made available during the ``localimport`` context.
-  :param parent_dir:
-    If omitted, defaults to the parent directory of the ``__file__``
-    variable from the parent stackframe. Relative paths in the *path*
-    parameter will be considered relative to this directory.
-  :param do_eggs:
-    True by default. If True, ``.egg`` files in any of the specified
-    *path* s will be added to :attr:`localimport.path` as well.
-  :param do_pth:
-    True by default. Evaluate ``.pth`` files found in the paths.
-  .. attribute:: path
-    The paths from which modules should be imported.These will also be
-    used to determine if a module was imported from the local site and
-    wether it should be released after the localimport is complete.
-  .. attribute:: meta_path
-    A list of importer objects that will be prepended to `sys.meta_path`
-    during the localimport. Use of meta importers is discouraged as it
-    could lead to problems determining whether a module is from the local
-    site.
-  .. attribute:: modules
-    Dictionary of the modules imported from the local site.
-  .. attribute:: in_context
-    True when the localimport context-manager is active.
-  .. attribute:: do_pth
-    If True, ``.pth`` files are evaluated on :meth:`__enter__`.
-  '''
 
   _py3k = sys.version_info[0] >= 3
   _string_types = (str,) if _py3k else (basestring,)
