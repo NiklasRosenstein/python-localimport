@@ -47,7 +47,7 @@ Pre-minified versions of `localimport` can be found in this [Gist][pre-minified]
 Of course you can minify the code by yourself, for example using the [nr][nr]
 command-line tools.
 
-    nr py.blob localimport.py -cm > localimport-gzb64-w80.py
+    nr py.blob localimport.py -cme localimport > localimport-gzb64-w80.py
 
 Depending on your application, you may want to use a bootstrapper entry point.
 
@@ -60,11 +60,10 @@ with localimport('.') as _importer:
   main()
 ```
 
-
-[pyminifier]: https://pypi.python.org/pypi/pyminifier
-[py-blobbify]: https://pypi.python.org/pypi/py-blobbify
-[pre-minified]: http://bitly.com/localimport-min
-[nr]: https://github.com/NiklasRosenstein/py-nr
+  [pyminifier]: https://pypi.python.org/pypi/pyminifier
+  [py-blobbify]: https://pypi.python.org/pypi/py-blobbify
+  [pre-minified]: http://bitly.com/localimport-min
+  [nr]: https://github.com/NiklasRosenstein/py-nr
 
 ### API
 
@@ -104,8 +103,7 @@ _Parameters_
 Disable one or more modules by moving them from the global module cache
 (`sys.modules`) to a dictionary of temporary hidden modules in the isolated
 environment. Once the `localimport()` context manager exits, these modules
-will be restored.  
-Does nothing when the module(s) does/do not exist.
+will be restored. Does nothing when a module does not exist.
 
 _Parameters_
 
