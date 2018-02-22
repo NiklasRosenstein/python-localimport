@@ -1,3 +1,10 @@
+#### 1.7.2
+
+- `localimport.discover()` now uses `pkgutil.iter_modules()` rather than
+  `pkgutil.walk_packages()`: We only need to know the top-level package/module
+  names and `walk_packages()` will cause actual packages to be imported in
+  order to find submodules.
+
 #### 1.7.1
 
 - Fix `localimport.autodisable()` for Python 2 (where

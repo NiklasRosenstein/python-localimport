@@ -313,7 +313,7 @@ class localimport(object):
     mod.__path__ = pkgutil.extend_path(mod.__path__, package_name)
 
   def discover(self):
-    return pkgutil.walk_packages(self.path)
+    return pkgutil.iter_modules(self.path)
 
   def disable(self, module):
     if not isinstance(module, self._string_types):
