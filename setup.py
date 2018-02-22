@@ -30,7 +30,7 @@ def restify():
 
 setup(
   name="localimport",
-  version="1.7.2",
+  version="1.7.3",
   description="Isolated import of Python Modules",
   long_description=restify(),
   author="Niklas Rosenstein",
