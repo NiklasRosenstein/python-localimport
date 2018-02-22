@@ -1,3 +1,9 @@
+#### 1.7.3
+
+- `.pth` files are now evaluated when the `localimport()` constructor is
+  called. Import statements in these files will still only be evaluated
+  inside the context manager.
+
 #### 1.7.2
 
 - `localimport.discover()` now uses `pkgutil.iter_modules()` rather than

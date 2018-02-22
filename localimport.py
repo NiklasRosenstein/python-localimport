@@ -70,22 +70,30 @@ def is_subpath(path, parent):
   return relpath == os.curdir or not relpath.startswith(os.pardir)
 
 
-def eval_pth(filename, sitedir):
+def eval_pth(filename, sitedir, dest=None, imports=None):
   '''
   Evaluates a `.pth` file (including support for `import` statements), and
-  appends the result  to `sys.path`.
+  appends the result to the list *dest*. If *dest* is #None, it will fall
+  back to `sys.path`.
+
+  If *imports* is specified, it must be a list. `import` statements will not
+  executed but instead appended to that list in tuples of
+  (*filename*, *line*, *stmt*).
+
+  Returns a tuple of (*dest*, *imports*).
   '''
 
+  if dest is None:
+    dest = sys.path
   if not os.path.isfile(filename):
     return
   with open(filename, 'r') as fp:
     for index, line in enumerate(fp):
       if line.startswith('import'):
-        line_fn = '{0}#{1}'.format(filename, index + 1)
-        try:
-          exec(compile(line, line_fn, 'exec'))
-        except BaseException:
-          traceback.print_exc()
+        if imports is None:
+          exec_pth_import(filename, index+1, line)
+        else:
+          imports.append((filename, index+1, line))
       else:
         index = line.find('#')
         if index > 0: line = line[:index]
@@ -93,8 +101,18 @@ def eval_pth(filename, sitedir):
         if not os.path.isabs(line):
           line = os.path.join(os.path.dirname(filename), line)
         line = os.path.normpath(line)
-        if line and line not in sys.path:
-          sys.path.insert(0, line)
+        if line and line not in dest:
+          dest.insert(0, line)
+
+  return dest
+
+
+def exec_pth_import(filename, lineno, line):
+  line = '\n' * (lineno - 1) + line.strip()
+  try:
+    exec(compile(line, filename, 'exec'))
+  except BaseException:
+    traceback.print_exc()
 
 
 def extend_path(pth, name):
@@ -173,6 +191,15 @@ class localimport(object):
     self.do_pth = do_pth
     self.in_context = False
     self.do_autodisable = do_autodisable
+    self.pth_imports = []
+
+    if self.do_pth:
+      seen = set()
+      for path_name in self.path:
+        for fn in glob.glob(os.path.join(path_name, '*.pth')):
+          if fn in seen: continue
+          seen.add(fn)
+          eval_pth(fn, path_name, dest=self.path, imports=self.pth_imports)
 
   def __enter__(self):
     # pkg_resources comes with setuptools.
@@ -209,11 +236,9 @@ class localimport(object):
       except KeyError: pass
       sys.modules[key] = mod
 
-    # Evaluate .pth files.
-    if self.do_pth:
-      for path_name in self.path:
-        for fn in glob.glob(os.path.join(path_name, '*.pth')):
-          eval_pth(fn, path_name)
+    # Evaluate imports from the .pth files, if any.
+    for fn, lineno, stmt in self.pth_imports:
+      exec_pth_import(fn, lineno, stmt)
 
     # Add the original path to sys.path.
     sys.path += self.state['path']
