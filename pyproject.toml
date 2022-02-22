@@ -1,0 +1,42 @@
+[tool.poetry]
+name = "localimport"
+version = "1.7.3"
+description = "Isolated import of Python modules."
+authors = ["Niklas Rosenstein <rosensteinniklas@gmail.com>"]
+license = "MIT"
+readme = "readme.md"
+homepage = ""
+classifiers = [
+  "Development Status :: 5 - Production/Stable",
+  "Environment :: Other Environment",
+  "Environment :: Plugins",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 2",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: Implementation :: CPython",
+  "Programming Language :: Python :: Implementation :: Jython",
+  "Programming Language :: Python :: Implementation :: PyPy",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+  "Topic :: Utilities"
+]
+keywords = ["import", "embedded", "modules", "packages"]
+
+[tool.poetry.dependencies]
+python = "^3.5"
+
+[tool.poetry.dev-dependencies]
+pytest = "*"
+mypy = "*"
+
+[tool.slam]
+typed = true
+
+[tool.slam.test]
+pytest = "pytest tests/"
+mypy = "mypy src/"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

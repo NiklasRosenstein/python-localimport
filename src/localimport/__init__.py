@@ -1,24 +1,3 @@
-# The MIT License (MIT)
-#
-# Copyright (c) 2018 Niklas Rosenstein
-#
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the "Software"), to deal
-# in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-# copies of the Software, and to permit persons to whom the Software is
-# furnished to do so, subject to the following conditions:
-#
-# The above copyright notice and this permission notice shall be included in all
-# copies or substantial portions of the Software.
-#
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-# SOFTWARE.
 
 __author__ = 'Niklas Rosenstein <rosensteinniklas@gmail.com>'
 __version__ = '1.7.3'
@@ -30,19 +9,6 @@ import pkgutil
 import sys
 import traceback
 import zipfile
-
-if sys.version_info[0] == 2:
-  # FIXME: pyminifier introduces an additional, badly indented 'pass'
-  # statement to single line functions. See pyminifier#89
-  def items(x):
-    return x.items()
-  def iteritems(x):
-    return x.iteritems()
-else:
-  def items(x):
-    return list(x.items())
-  def iteritems(x):
-    return x.items()
 
 
 def is_local(filename, pathlist):
@@ -161,9 +127,6 @@ def extend_path(pth, name):
 
 class localimport(object):
 
-  _py3k = sys.version_info[0] >= 3
-  _string_types = (str,) if _py3k else (basestring,)
-
   def __init__(self, path, parent_dir=None, do_eggs=True, do_pth=True,
                do_autodisable=True):
     if not parent_dir:
@@ -174,7 +137,7 @@ class localimport(object):
     # Convert relative paths to absolute paths with parent_dir and
     # evaluate .egg files in the specified directories.
     self.path = []
-    if isinstance(path, self._string_types):
+    if isinstance(path, str):
       path = [path]
     for path_name in path:
       if not os.path.isabs(path_name):
@@ -231,7 +194,7 @@ class localimport(object):
     # If this function is called not the first time, we need to
     # restore the modules that have been imported with it and
     # temporarily disable the ones that would be shadowed.
-    for key, mod in items(self.modules):
+    for key, mod in list(self.modules.items()):
       try: self.state['disables'][key] = sys.modules.pop(key)
       except KeyError: pass
       sys.modules[key] = mod
@@ -244,7 +207,7 @@ class localimport(object):
     sys.path += self.state['path']
 
     # Update the __path__ of all namespace modules.
-    for key, mod in items(sys.modules):
+    for key, mod in list(sys.modules.items()):
       if mod is None:
         # Relative imports could have lead to None-entries in
         # sys.modules. Get rid of them so they can be re-evaluated.
@@ -286,7 +249,7 @@ class localimport(object):
     # state or modules that are from any of the localimport context
     # paths away.
     modules = sys.modules.copy()
-    for key, mod in iteritems(modules):
+    for key, mod in modules.items():
       force_pop = False
       filename = getattr(mod, '__file__', None)
       if not filename and key not in sys.builtin_module_names:
@@ -300,7 +263,7 @@ class localimport(object):
 
     # Restore the disabled modules.
     sys.modules.update(self.state['disables'])
-    for key, mod in iteritems(self.state['disables']):
+    for key, mod in self.state['disables'].items():
       try: parent_name = key.split('.')[-2]
       except IndexError: parent_name = None
       if parent_name and parent_name in sys.modules:
@@ -308,7 +271,7 @@ class localimport(object):
         setattr(parent, key.split('.')[-1], mod)
 
     # Restore the original __path__ value of namespace packages.
-    for key, path in iteritems(self.state['nspaths']):
+    for key, path in self.state['nspaths'].items():
       try: sys.modules[key].__path__ = path
       except KeyError: pass
 
@@ -341,13 +304,13 @@ class localimport(object):
     return pkgutil.iter_modules(self.path)
 
   def disable(self, module):
-    if not isinstance(module, self._string_types):
+    if not isinstance(module, str):
       [self.disable(x) for x in module]
       return
 
     sub_prefix = module + '.'
     modules = {}
-    for key, mod in iteritems(sys.modules):
+    for key, mod in sys.modules.items():
       if key == module or key.startswith(sub_prefix):
         try: parent_name = '.'.join(key.split('.')[:-1])
         except IndexError: parent_name = None
@@ -362,7 +325,7 @@ class localimport(object):
             pass
 
     # Pop all the modules we found from sys.modules
-    for key, mod in iteritems(modules):
+    for key, mod in modules.items():
       del sys.modules[key]
       self.state['disables'][key] = mod
 
