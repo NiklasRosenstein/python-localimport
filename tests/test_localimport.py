@@ -1,5 +1,4 @@
 
-from nose.tools import *
 from localimport import localimport
 import os
 import sys
@@ -57,6 +56,6 @@ def test_localimpot_curdir():
 
 def test_discover():
   with localimport('.') as _imp:
-    assert_equals(sorted(x.name for x in _imp.discover()), ['another_module', 'some_module', 'test_localimport'])
+    assert sorted(x.name for x in _imp.discover()) == ['another_module', 'some_module', 'test_localimport']
   with localimport('modules') as _imp:
-    assert_equals(sorted(x.name for x in _imp.discover()), ['another_module', 'some_module'])
+    assert sorted(x.name for x in _imp.discover()) == ['another_module', 'some_module']
