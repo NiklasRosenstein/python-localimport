@@ -1,5 +1,5 @@
 [[entries]]
 id = "d931cb6a-7d33-401b-8cd9-00befdc64392"
 type = "refactor"
-description = "modernize codebase, require Python 3.5 or newer"
+description = "modernize codebase, require Python 3.6 or newer"
 author = "@NiklasRosenstein"
