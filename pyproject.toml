@@ -5,7 +5,7 @@ description = "Isolated import of Python modules."
 authors = ["Niklas Rosenstein <rosensteinniklas@gmail.com>"]
 license = "MIT"
 readme = "readme.md"
-homepage = ""
+homepage = "https://github.com/NiklasRosenstein/localimport"
 classifiers = [
   "Development Status :: 5 - Production/Stable",
   "Environment :: Other Environment",
