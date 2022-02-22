@@ -2,7 +2,7 @@ name: "Python"
 
 on:
   push:
-    branches: [ "develop", "docs" ]
+    branches: [ "develop" ]
     tags: [ '*' ]
   pull_request:
     branches: [ "develop" ]
@@ -24,7 +24,7 @@ jobs:
       uses: actions/setup-python@v2
       with: { python-version: "${{ matrix.python-version }}" }
     - name: Install package and dev dependencies
-      run: .tooling/bin/slam install
+      run: .tooling/bin/slam install --no-venv-check
     - name: Run tests
       run: slam test
 
