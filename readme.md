@@ -12,6 +12,8 @@
 - Compatible with `pkg_resources` namespaces
 - Mocks `pkgutil.extend_path()` to support zipped Python eggs
 
+Check out the [localimport Documentation](http://niklasrosenstein.github.io/python-localimport/).
+
 ### Example
 
 Given your Python script, application or plugin comes with a directory that

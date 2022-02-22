@@ -23,6 +23,9 @@ classifiers = [
 ]
 keywords = ["import", "embedded", "modules", "packages"]
 
+[tool.poetry.urls]
+documentation = "http://niklasrosenstein.github.io/python-localimport/"
+
 [tool.poetry.dependencies]
 python = "^3.6"
 
