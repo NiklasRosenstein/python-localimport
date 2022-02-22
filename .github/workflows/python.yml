@@ -26,7 +26,7 @@ jobs:
     - name: Install package and dev dependencies
       run: .tooling/bin/slam install --no-venv-check
     - name: Run tests
-      run: slam test
+      run: .tooling/bin/slam test
 
   docs:
     runs-on: ubuntu-latest
