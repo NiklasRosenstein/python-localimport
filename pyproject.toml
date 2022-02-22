@@ -29,6 +29,7 @@ python = "^3.5"
 [tool.poetry.dev-dependencies]
 pytest = "*"
 mypy = "*"
+types-setuptools = "*"
 
 [tool.slam]
 typed = true
