@@ -8,13 +8,18 @@ import os
 import pkgutil
 import sys
 import traceback
+import typing as t
 import zipfile
 
+if t.TYPE_CHECKING:
+  from importlib.machinery import ModuleSpec
+  from types import ModuleType
+  class _MetaPathFinder(t.Protocol):
+      def find_spec(self, fullname: str, path: t.Sequence[str] | None, target: ModuleType | None = ...) -> ModuleSpec | None: ...
 
-def is_local(filename, pathlist):
-  '''
-  Returns True if *filename* is a subpath of any of the paths in *pathlist*.
-  '''
+
+def is_local(filename: str, pathlist: t.List[str]) -> bool:
+  ''' Returns True if *filename* is a subpath of any of the paths in *pathlist*. '''
 
   filename = os.path.abspath(filename)
   for path_name in pathlist:
@@ -24,10 +29,8 @@ def is_local(filename, pathlist):
   return False
 
 
-def is_subpath(path, parent):
-  '''
-  Returns True if *path* points to the same or a subpath of *parent*.
-  '''
+def is_subpath(path: str, parent: str) -> bool:
+  ''' Returns True if *path* points to the same or a subpath of *parent*. '''
 
   try:
     relpath = os.path.relpath(path, parent)
@@ -36,23 +39,25 @@ def is_subpath(path, parent):
   return relpath == os.curdir or not relpath.startswith(os.pardir)
 
 
-def eval_pth(filename, sitedir, dest=None, imports=None):
-  '''
-  Evaluates a `.pth` file (including support for `import` statements), and
-  appends the result to the list *dest*. If *dest* is #None, it will fall
-  back to `sys.path`.
+def eval_pth(
+  filename: str,
+  sitedir: str,
+  dest: t.Optional[t.List[str]] = None,
+  imports: t.Optional[t.List[t.Tuple[str, int, str]]] = None,
+) -> t.List[str]:
+  ''' Evaluates a `.pth` file (including support for `import` statements), and appends the result to the list
+  *dest*. If *dest* is #None, it will fall back to `sys.path`.
 
-  If *imports* is specified, it must be a list. `import` statements will not
-  executed but instead appended to that list in tuples of
-  (*filename*, *line*, *stmt*).
-
-  Returns a tuple of (*dest*, *imports*).
+  If *imports* is specified, it must be a list. `import` statements will not executed but instead appended to
+  that list in tuples of (*filename*, *line*, *stmt*).
   '''
 
   if dest is None:
     dest = sys.path
+
   if not os.path.isfile(filename):
-    return
+    return []
+
   with open(filename, 'r') as fp:
     for index, line in enumerate(fp):
       if line.startswith('import'):
@@ -73,7 +78,7 @@ def eval_pth(filename, sitedir, dest=None, imports=None):
   return dest
 
 
-def exec_pth_import(filename, lineno, line):
+def exec_pth_import(filename: str, lineno: int, line: str) -> None:
   line = '\n' * (lineno - 1) + line.strip()
   try:
     exec(compile(line, filename, 'exec'))
@@ -81,11 +86,9 @@ def exec_pth_import(filename, lineno, line):
     traceback.print_exc()
 
 
-def extend_path(pth, name):
-  '''
-  Better implementation of #pkgutil.extend_path()  which adds support for
-  zipped Python eggs. The original #pkgutil.extend_path() gets mocked by this
-  function inside the #localimport context.
+def extend_path(pth: t.List[str], name: str) -> t.List[str]:
+  ''' Better implementation of #pkgutil.extend_path()  which adds support for zipped Python eggs. The original
+  #pkgutil.extend_path() gets mocked by this function inside the #localimport context.
   '''
 
   def zip_isfile(z, name):
@@ -125,10 +128,16 @@ def extend_path(pth, name):
   return [os.path.normpath(x) for x in mod_path]
 
 
-class localimport(object):
+class localimport:
 
-  def __init__(self, path, parent_dir=None, do_eggs=True, do_pth=True,
-               do_autodisable=True):
+  def __init__(
+    self,
+    path: t.Union[t.List[str], str],
+    parent_dir: t.Optional[str] = None,
+    do_eggs: bool = True,
+    do_pth: bool = True,
+    do_autodisable: bool = True,
+  ) -> None:
     if not parent_dir:
       frame = sys._getframe(1).f_globals
       if '__file__' in frame:
@@ -149,12 +158,12 @@ class localimport(object):
       if do_eggs:
         self.path.extend(glob.glob(os.path.join(path_name, '*.egg')))
 
-    self.meta_path = []
-    self.modules = {}
+    self.meta_path: t.List[_MetaPathFinder] = []
+    self.modules: t.Dict[str, t.Any] = {}
     self.do_pth = do_pth
     self.in_context = False
     self.do_autodisable = do_autodisable
-    self.pth_imports = []
+    self.pth_imports: t.List[t.Tuple[str, int, str]] = []
 
     if self.do_pth:
       seen = set()
@@ -164,13 +173,13 @@ class localimport(object):
           seen.add(fn)
           eval_pth(fn, path_name, dest=self.path, imports=self.pth_imports)
 
-  def __enter__(self):
+  def __enter__(self) -> 'localimport':
     # pkg_resources comes with setuptools.
     try:
       import pkg_resources
-      nsdict = copy.deepcopy(pkg_resources._namespace_packages)
+      nsdict = copy.deepcopy(pkg_resources._namespace_packages)  # type: ignore
       declare_namespace = pkg_resources.declare_namespace
-      pkg_resources.declare_namespace = self._declare_namespace
+      pkg_resources.declare_namespace = self._declare_namespace  # type: ignore
     except ImportError:
       nsdict = None
       declare_namespace = None
@@ -189,7 +198,7 @@ class localimport(object):
     # Update the systems meta path and apply function mocks.
     sys.path[:] = self.path
     sys.meta_path[:] = self.meta_path + sys.meta_path
-    pkgutil.extend_path = extend_path
+    pkgutil.extend_path = extend_path  # type: ignore
 
     # If this function is called not the first time, we need to
     # restore the modules that have been imported with it and
@@ -223,7 +232,7 @@ class localimport(object):
       self.autodisable()
     return self
 
-  def __exit__(self, *__):
+  def __exit__(self, *__) -> None:
     if not self.in_context:
       raise RuntimeError('context not entered')
 
@@ -267,12 +276,12 @@ class localimport(object):
       try: parent_name = key.split('.')[-2]
       except IndexError: parent_name = None
       if parent_name and parent_name in sys.modules:
-        parent = sys.modules[parent_name]
-        setattr(parent, key.split('.')[-1], mod)
+        parent_module = sys.modules[parent_name]
+        setattr(parent_module, key.split('.')[-1], mod)
 
     # Restore the original __path__ value of namespace packages.
-    for key, path in self.state['nspaths'].items():
-      try: sys.modules[key].__path__ = path
+    for key, path_list in self.state['nspaths'].items():
+      try: sys.modules[key].__path__ = path_list
       except KeyError: pass
 
     # Restore the original state of the global importer.
@@ -282,14 +291,14 @@ class localimport(object):
     try:
       import pkg_resources
       pkg_resources.declare_namespace = self.state['declare_namespace']
-      pkg_resources._namespace_packages.clear()
-      pkg_resources._namespace_packages.update(self.state['nsdict'])
+      pkg_resources._namespace_packages.clear()  # type: ignore
+      pkg_resources._namespace_packages.update(self.state['nsdict'])  # type: ignore
     except ImportError: pass
 
     self.in_context = False
     del self.state
 
-  def _declare_namespace(self, package_name):
+  def _declare_namespace(self, package_name: str) -> None:
     '''
     Mock for #pkg_resources.declare_namespace() which calls
     #pkgutil.extend_path() afterwards as the original implementation doesn't
@@ -298,14 +307,15 @@ class localimport(object):
 
     self.state['declare_namespace'](package_name)
     mod = sys.modules[package_name]
-    mod.__path__ = pkgutil.extend_path(mod.__path__, package_name)
+    mod.__path__ = pkgutil.extend_path(mod.__path__, package_name)  # type: ignore
 
-  def discover(self):
+  def discover(self) -> t.Iterable[pkgutil.ModuleInfo]:
     return pkgutil.iter_modules(self.path)
 
-  def disable(self, module):
+  def disable(self, module: t.Union[t.List[str], str]) -> None:
     if not isinstance(module, str):
-      [self.disable(x) for x in module]
+      for module_name in module:
+        self.disable(module_name)
       return
 
     sub_prefix = module + '.'
@@ -329,6 +339,6 @@ class localimport(object):
       del sys.modules[key]
       self.state['disables'][key] = mod
 
-  def autodisable(self):
+  def autodisable(self) -> None:
     for loader, name, ispkg in self.discover():
       self.disable(name)
