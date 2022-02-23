@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "localimport"
-version = "1.7.5"
+version = "1.7.6"
 description = "Isolated import of Python modules."
 authors = ["Niklas Rosenstein <rosensteinniklas@gmail.com>"]
 license = "MIT"

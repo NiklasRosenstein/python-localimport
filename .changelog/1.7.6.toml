@@ -1,0 +1,7 @@
+release-date = "2022-02-23"
+
+[[entries]]
+id = "ea7e5ba8-e0a9-458b-b3e3-db078dac9993"
+type = "improvement"
+description = "add full type hints to source code"
+author = "@NiklasRosenstein"
