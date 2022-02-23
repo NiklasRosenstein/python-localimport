@@ -12,10 +12,7 @@ import typing as t
 import zipfile
 
 if t.TYPE_CHECKING:
-  from importlib.machinery import ModuleSpec
-  from types import ModuleType
-  class _MetaPathFinder(t.Protocol):
-      def find_spec(self, fullname: str, path: t.Optional[t.Sequence[str]], target: t.Optional[ModuleType] = ...) -> t.Optional[ModuleSpec]: ...
+  from sys import _MetaPathFinder
 
 
 def is_local(filename: str, pathlist: t.List[str]) -> bool:
